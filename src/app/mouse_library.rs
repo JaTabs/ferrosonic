@@ -26,6 +26,15 @@ impl App {
         let left = layout.content_left.unwrap_or(layout.content);
         let right = layout.content_right.unwrap_or(layout.content);
 
+        // The tree title bar doubles as the search box: clicking it focuses
+        // the filter input, same as pressing '/'.
+        if y == left.y && x >= left.x && x < left.x + left.width {
+            state.client.artists.filter_active = true;
+            state.client.artists.expanded.clear();
+            state.client.artists.selected_index = Some(0);
+            return Ok(());
+        }
+
         if x >= left.x && x < left.x + left.width && y >= left.y && y < left.y + left.height {
             let row_in_viewport = y.saturating_sub(left.y + 1) as usize;
             let item_index = state.client.artists.tree_scroll_offset + row_in_viewport;

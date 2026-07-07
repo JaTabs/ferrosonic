@@ -631,6 +631,19 @@ impl App {
                 return Ok(());
             }
             KeyCode::Enter => {
+                let query = state.client.artists.filter.clone();
+                state.client.artists.filter_active = false;
+                let _ = state;
+                drop(cs);
+                drop(ds);
+                if query.is_empty() {
+                    return Ok(());
+                }
+                return self.quick_play_best_match(&query).await;
+            }
+            // Tab keeps the old Enter behaviour: close the input and leave the
+            // results up for arrow-key browsing.
+            KeyCode::Tab => {
                 state.client.artists.filter_active = false;
                 let _ = state;
                 drop(cs);
@@ -684,6 +697,64 @@ impl App {
             }
         });
         Ok(())
+    }
+
+    /// Enter in the search box: play the best own-title match right away and
+    /// clear the search. Exact (case-insensitive) title wins, else the first
+    /// title containing the query — the same own-name rule the results tree
+    /// applies. Without an own-title hit nothing plays (search3 also matches
+    /// songs via artist/album, so playing blind would surprise); the fresh
+    /// results are kept up for the old arrow-key browsing flow instead.
+    // significant_drop_tightening: tokio guard held to scope; not tightened (early-drop is borrow-blocked, spans a trailing await, or saves nothing before return).
+    #[allow(clippy::significant_drop_tightening)]
+    async fn quick_play_best_match(&self, query: &str) -> Result<(), Error> {
+        // A fresh awaited search, not the debounced in-flight one: Enter right
+        // after fast typing must act on the final query, never a stale reply.
+        let resp = self
+            .client
+            .request(DaemonRequest::Search {
+                query: query.to_string(),
+                artist_count: 100,
+                album_count: 100,
+                song_count: 200,
+            })
+            .await;
+        let Ok(crate::ipc::DaemonResponse::SearchResults(results)) = resp else {
+            let mut cs = self.client_state.write().await;
+            cs.notify_error("Search failed");
+            return Ok(());
+        };
+        let q = query.to_lowercase();
+        let song = results
+            .song
+            .iter()
+            .find(|s| s.title.to_lowercase() == q)
+            .or_else(|| {
+                results
+                    .song
+                    .iter()
+                    .find(|s| s.title.to_lowercase().contains(&q))
+            })
+            .cloned();
+        let Some(song) = song else {
+            let mut cs = self.client_state.write().await;
+            cs.artists.search_results = Some(results);
+            cs.notify("No song title matched; browse results with arrow keys");
+            return Ok(());
+        };
+        {
+            let mut cs = self.client_state.write().await;
+            cs.artists.exit_search();
+            cs.notify(format!("Playing: {}", song.title));
+        }
+        self.client
+            .request(DaemonRequest::EnqueueSongs {
+                songs: vec![song],
+                mode: EnqueueMode::Replace { play_from: Some(0) },
+            })
+            .await
+            .map(|_| ())
+            .map_err(Error::from)
     }
 
     async fn handle_library_view_toggle(&self) -> Result<(), Error> {

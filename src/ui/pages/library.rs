@@ -501,7 +501,12 @@ fn render_tree(frame: &mut Frame<'_>, area: Rect, state: &mut AppState<'_>, colo
     let base_block = Block::default()
         .borders(Borders::ALL)
         .border_style(border_style);
-    let block = if searching {
+    let block = if artists.filter_active {
+        base_block.title(format!(
+            " Search ({})  \u{00b7}  Enter: play \u{00b7} Tab: browse ",
+            artists.filter
+        ))
+    } else if searching {
         base_block.title(format!(
             " Search ({})  \u{00b7}  {lib_label} ",
             artists.filter

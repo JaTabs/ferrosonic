@@ -205,8 +205,9 @@ It is resolved at startup. Because the background daemon has no terminal, **the 
 
 | Key | Action |
 |---|---|
-| `/` | Unified search: typing fires one server-side `search3` across artists, albums, and songs |
-| `Enter` | Lock the filter in (keeps results, exits input mode) |
+| `/` | Unified search: typing fires one server-side `search3` across artists, albums, and songs (clicking the tree title bar also opens it) |
+| `Enter` | Play the best song-title match right away (exact title first, then first containing hit); with no title match, falls back to browsing the results |
+| `Tab` | Lock the filter in (keeps results, exits input mode) |
 | `Esc` | Clear filter and search results |
 | `Up` / `k` | Move selection up |
 | `Down` / `j` | Move selection down |
