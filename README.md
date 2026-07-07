@@ -4,6 +4,13 @@ A terminal Subsonic music client written in Rust: bit-perfect audio, gapless pla
 
 It is a ground-up Rust rewrite of [Termsonic](https://git.sixfoisneuf.fr/termsonic/about/) (a Go client by [SixFoisNeuf](https://www.sixfoisneuf.fr/posts/termsonic-a-terminal-client-for-subsonic/)), adding PipeWire sample-rate switching, MPRIS2 controls, themes, and mouse support.
 
+> **About this fork** ([upstream: jaidaken/ferrosonic](https://github.com/jaidaken/ferrosonic)) — adds two features on top of upstream:
+>
+> - **Quick-play search**: press `/` in the Library, type a song title, hit `Enter` — the best title match plays immediately (`Tab` keeps the old browse-the-results behavior).
+> - **Arrow-key seeking**: `←`/`→` seek back/forward 5 seconds anywhere in the app; hold `Shift` for 10-second jumps.
+>
+> To get them, [build from source](#build-from-source) from this repo — the Quick Install script downloads the upstream binary, which does not include them.
+
 ## Features
 
 ### Audio
@@ -58,9 +65,9 @@ Ferrosonic requires the following at runtime:
 | **cava** | Audio visualizer | Optional |
 | **chafa** | Higher-fidelity cover-art half-blocks (sextants / braille / dithering). Loaded via `dlopen` at runtime; if absent, ferrosonic falls back to primitive `▀▄` half-blocks. | Optional |
 
-### Quick Install
+### Quick Install (upstream binary — no fork extras)
 
-Supports Arch, Fedora, and Debian/Ubuntu. Installs runtime dependencies, downloads the latest precompiled binary, and installs to `/usr/local/bin/`:
+Supports Arch, Fedora, and Debian/Ubuntu. Installs runtime dependencies, downloads the latest **upstream** precompiled binary (without this fork's quick-play search and arrow seeking), and installs to `/usr/local/bin/`:
 
 ```bash
 curl -sSf https://raw.githubusercontent.com/jaidaken/ferrosonic/master/install.sh | sh
@@ -70,10 +77,10 @@ The install drops a single `ferrosonic` binary into `/usr/local/bin/`. It runs a
 
 ### Build from Source
 
-If you prefer to build from source, you'll also need: Rust toolchain, pkg-config, OpenSSL dev headers, and D-Bus dev headers. Then:
+This is the way to get this fork's features. You'll also need: Rust toolchain, pkg-config, OpenSSL dev headers, and D-Bus dev headers. Then:
 
 ```bash
-git clone https://github.com/jaidaken/ferrosonic.git
+git clone -b feature/quick-play-search https://github.com/JaTabs/ferrosonic.git
 cd ferrosonic
 cargo build --release
 sudo cp target/release/ferrosonic /usr/local/bin/
