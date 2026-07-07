@@ -93,17 +93,9 @@ impl App {
                     .map(|_| ())
                     .map_err(Error::from);
             }
+            // Left/Right never reach here: the global handler maps them to seek.
             KeyCode::Tab => {
                 state.client.songs.focus = usize::from(state.client.songs.focus != 1);
-            }
-            KeyCode::Left => {
-                state.client.songs.focus = 0;
-            }
-            KeyCode::Right if !state.songs_list().is_empty() => {
-                state.client.songs.focus = 1;
-                if state.client.songs.selected_index.is_none() {
-                    state.client.songs.selected_index = Some(0);
-                }
             }
             KeyCode::Char('m') => {
                 let song_id = state

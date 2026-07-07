@@ -113,6 +113,44 @@ async fn h_sends_previous() {
 
 #[tokio::test]
 #[serial]
+async fn arrows_seek_5s_and_shift_arrows_seek_10s() {
+    for (k, expected) in [
+        (key(KeyCode::Left), -5.0),
+        (key(KeyCode::Right), 5.0),
+        (key_mod(KeyCode::Left, KeyModifiers::SHIFT), -10.0),
+        (key_mod(KeyCode::Right, KeyModifiers::SHIFT), 10.0),
+    ] {
+        let client = RecordingClient::new();
+        let mut app = app_with(client.clone());
+        press(&mut app, k).await;
+        assert!(
+            client.sent().iter().any(|r| matches!(
+                r,
+                DaemonRequest::SeekRelative(s) if (*s - expected).abs() < 1e-6
+            )),
+            "{k:?} must send SeekRelative({expected})"
+        );
+    }
+}
+
+#[tokio::test]
+#[serial]
+async fn arrows_on_settings_adjust_values_not_seek() {
+    let client = RecordingClient::new();
+    let mut app = app_with(client.clone());
+    app.client_state.write().await.page = ferrosonic::app::state::Page::Settings;
+    press(&mut app, key(KeyCode::Left)).await;
+    assert!(
+        !client
+            .sent()
+            .iter()
+            .any(|r| matches!(r, DaemonRequest::SeekRelative(_))),
+        "arrows on Settings must stay page-local, not seek"
+    );
+}
+
+#[tokio::test]
+#[serial]
 async fn n_stars_the_now_playing_song() {
     let client = RecordingClient::new();
     let mut app = app_with(client.clone());

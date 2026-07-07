@@ -213,6 +213,23 @@ impl App {
                     .map(|_| ())
                     .map_err(Error::from);
             }
+            // Seek ±5s (±10s with Shift). Settings keeps arrows for value
+            // adjust; pane focus everywhere else still has Tab.
+            (KeyCode::Left | KeyCode::Right, m)
+                if state.client.page != Page::Settings
+                    && (m == KeyModifiers::NONE || m == KeyModifiers::SHIFT) =>
+            {
+                let step = if m == KeyModifiers::SHIFT { 10.0 } else { 5.0 };
+                let offset = if key.code == KeyCode::Left { -step } else { step };
+                let _ = state;
+                drop(cs);
+                drop(ds);
+                let _ = self
+                    .client
+                    .request(DaemonRequest::SeekRelative(offset))
+                    .await;
+                return Ok(());
+            }
             (KeyCode::Char('n'), KeyModifiers::NONE) => {
                 let song_id = state.daemon.now_playing.song.as_ref().map(|s| s.id.clone());
                 let _ = state;

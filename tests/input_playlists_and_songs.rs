@@ -111,7 +111,7 @@ async fn playlists_up_at_top_bounds_to_zero() {
 
 #[tokio::test]
 #[serial]
-async fn playlists_right_with_songs_switches_focus_to_songs_pane() {
+async fn playlists_right_arrow_seeks_globally_not_focus() {
     let mut fx = build_app().await;
     fx.app.handle_key(key(KeyCode::F(4))).await.unwrap();
     {
@@ -120,7 +120,7 @@ async fn playlists_right_with_songs_switches_focus_to_songs_pane() {
     }
     fx.app.handle_key(key(KeyCode::Right)).await.unwrap();
     let cs = fx.app.client_state.read().await;
-    assert_eq!(cs.playlists.focus, 1);
+    assert_eq!(cs.playlists.focus, 0);
 }
 
 #[tokio::test]
@@ -136,7 +136,7 @@ async fn playlists_tab_cycles_focus() {
 
 #[tokio::test]
 #[serial]
-async fn quickplay_left_arrow_focuses_option_list() {
+async fn quickplay_left_arrow_seeks_globally_not_focus() {
     let mut fx = build_app().await;
     fx.app.handle_key(key(KeyCode::F(3))).await.unwrap();
     {
@@ -145,7 +145,7 @@ async fn quickplay_left_arrow_focuses_option_list() {
     }
     fx.app.handle_key(key(KeyCode::Left)).await.unwrap();
     let cs = fx.app.client_state.read().await;
-    assert_eq!(cs.songs.focus, 0);
+    assert_eq!(cs.songs.focus, 1);
 }
 
 #[tokio::test]

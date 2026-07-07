@@ -34,17 +34,9 @@ impl App {
         }
 
         match key.code {
+            // Left/Right never reach here: the global handler maps them to seek.
             KeyCode::Tab => {
                 state.client.playlists.focus = (state.client.playlists.focus + 1) % 2;
-            }
-            KeyCode::Left => {
-                state.client.playlists.focus = 0;
-            }
-            KeyCode::Right if !state.client.playlists.songs.is_empty() => {
-                state.client.playlists.focus = 1;
-                if state.client.playlists.selected_song.is_none() {
-                    state.client.playlists.selected_song = Some(0);
-                }
             }
             KeyCode::Up | KeyCode::Char('k') => {
                 if state.client.playlists.focus == 0 {

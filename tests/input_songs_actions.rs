@@ -71,7 +71,7 @@ async fn quickplay_down_in_option_pane_toggles_to_random() {
 
 #[tokio::test]
 #[serial]
-async fn quickplay_right_with_songs_focuses_song_pane() {
+async fn quickplay_right_arrow_seeks_globally_not_focus() {
     let mut fx = build_app().await;
     {
         let mut ds = fx.app.daemon_state.write().await;
@@ -83,7 +83,7 @@ async fn quickplay_right_with_songs_focuses_song_pane() {
     }
     fx.app.handle_key(key(KeyCode::Right)).await.unwrap();
     let cs = fx.app.client_state.read().await;
-    assert_eq!(cs.songs.focus, 1);
+    assert_eq!(cs.songs.focus, 0);
 }
 
 #[tokio::test]
@@ -122,7 +122,7 @@ async fn quickplay_enter_on_song_replaces_queue_and_plays() {
 
 #[tokio::test]
 #[serial]
-async fn quickplay_left_returns_focus_to_option_pane() {
+async fn quickplay_left_arrow_seeks_globally_not_focus() {
     let mut fx = build_app().await;
     {
         let mut cs = fx.app.client_state.write().await;
@@ -130,5 +130,5 @@ async fn quickplay_left_returns_focus_to_option_pane() {
     }
     fx.app.handle_key(key(KeyCode::Left)).await.unwrap();
     let cs = fx.app.client_state.read().await;
-    assert_eq!(cs.songs.focus, 0);
+    assert_eq!(cs.songs.focus, 1);
 }

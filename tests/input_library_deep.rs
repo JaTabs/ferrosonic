@@ -130,7 +130,7 @@ async fn enter_on_expanded_artist_collapses_it() {
 
 #[tokio::test]
 #[serial]
-async fn right_arrow_with_songs_switches_focus_to_song_pane() {
+async fn right_arrow_with_songs_seeks_globally_not_focus() {
     let mut fx = build_app().await;
     {
         let mut cs = fx.app.client_state.write().await;
@@ -160,7 +160,7 @@ async fn right_arrow_with_songs_switches_focus_to_song_pane() {
     fx.app.handle_key(key(KeyCode::Right)).await.unwrap();
     let cs = fx.app.client_state.read().await;
     assert_eq!(
-        cs.artists.focus, 1,
-        "Right with songs should switch focus to song pane"
+        cs.artists.focus, 0,
+        "Right is a global seek key; focus switching is Tab's job"
     );
 }

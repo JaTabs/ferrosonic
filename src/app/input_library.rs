@@ -71,17 +71,10 @@ impl App {
             KeyCode::Esc => {
                 state.client.artists.exit_search();
             }
+            // Left/Right never reach here (global seek); the filter-capture
+            // handler keeps its own Tab|Right arm for the search flow.
             KeyCode::Tab => {
                 state.client.artists.focus = (state.client.artists.focus + 1) % 2;
-            }
-            KeyCode::Left => {
-                state.client.artists.focus = 0;
-            }
-            KeyCode::Right if !state.client.artists.songs.is_empty() => {
-                state.client.artists.focus = 1;
-                if state.client.artists.selected_song.is_none() {
-                    state.client.artists.selected_song = Some(0);
-                }
             }
             KeyCode::Up | KeyCode::Char('k') => {
                 if state.client.artists.focus == 0 {

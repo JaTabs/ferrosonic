@@ -185,14 +185,15 @@ async fn highlighting_search_song_loads_its_album_with_that_song_preselected() {
             "the matched song is pre-selected within the album, not the first track"
         );
     }
-    // Right moves focus to the pane and keeps the matched song selected.
-    app.handle_key(key(KeyCode::Right)).await.unwrap();
+    // Tab moves focus to the pane and keeps the matched song selected
+    // (arrows are global seek keys now).
+    app.handle_key(key(KeyCode::Tab)).await.unwrap();
     let cs = app.client_state.read().await;
-    assert_eq!(cs.artists.focus, 1, "Right focuses the song pane");
+    assert_eq!(cs.artists.focus, 1, "Tab focuses the song pane");
     assert_eq!(
         cs.artists.selected_song,
         Some(1),
-        "Right lands on the matched song, not the first"
+        "Tab lands on the matched song, not the first"
     );
 }
 

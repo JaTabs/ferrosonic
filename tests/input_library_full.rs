@@ -173,14 +173,14 @@ async fn tab_cycles_focus_between_zero_and_one() {
 
 #[tokio::test]
 #[serial]
-async fn left_forces_focus_to_tree() {
+async fn left_arrow_seeks_globally_and_leaves_focus_alone() {
     let mut fx = build_app().await;
     {
         let mut cs = fx.app.client_state.write().await;
         cs.artists.focus = 1;
     }
     fx.app.handle_key(key(KeyCode::Left)).await.unwrap();
-    assert_eq!(fx.app.client_state.read().await.artists.focus, 0);
+    assert_eq!(fx.app.client_state.read().await.artists.focus, 1);
 }
 
 #[tokio::test]
@@ -193,7 +193,7 @@ async fn right_with_no_songs_is_noop() {
 
 #[tokio::test]
 #[serial]
-async fn right_with_songs_no_selected_song_initializes_to_zero() {
+async fn right_arrow_seeks_globally_and_leaves_page_alone() {
     let mut fx = build_app().await;
     {
         let mut cs = fx.app.client_state.write().await;
@@ -201,8 +201,8 @@ async fn right_with_songs_no_selected_song_initializes_to_zero() {
     }
     fx.app.handle_key(key(KeyCode::Right)).await.unwrap();
     let cs = fx.app.client_state.read().await;
-    assert_eq!(cs.artists.focus, 1);
-    assert_eq!(cs.artists.selected_song, Some(0));
+    assert_eq!(cs.artists.focus, 0);
+    assert_eq!(cs.artists.selected_song, None);
 }
 
 #[tokio::test]

@@ -190,6 +190,8 @@ It is resolved at startup. Because the background daemon has no terminal, **the 
 | `p` / `Space` | Toggle play/pause |
 | `l` | Next track |
 | `h` | Previous track |
+| `←` / `→` | Seek back / forward 5 seconds |
+| `Shift+←` / `Shift+→` | Seek back / forward 10 seconds |
 | `n` | Star/unstar currently-playing song |
 | `r` | Cycle repeat mode (Off → One → All) |
 | `Shift+T` | Shuffle the entire library and play |
@@ -211,7 +213,7 @@ It is resolved at startup. Because the background daemon has no terminal, **the 
 | `Esc` | Clear filter and search results |
 | `Up` / `k` | Move selection up |
 | `Down` / `j` | Move selection down |
-| `Left` / `Right` | Switch focus between tree and song list |
+| `Tab` | Switch focus between tree and song list (outside the search input) |
 | `Enter` | Expand/collapse artist, or play album/song |
 | `Backspace` | Return to tree from song list |
 | `e` | Add selected item to end of queue |
@@ -241,7 +243,6 @@ It is resolved at startup. Because the background daemon has no terminal, **the 
 | Key | Action |
 |---|---|
 | `Tab` | Switch focus between song options and song list |
-| `Left` / `Right` | Switch focus between options pane and song list |
 | `Up` / `k` | Move selection up (navigate options or songs) |
 | `Down` / `j` | Move selection down (navigate options or songs) |
 | `Enter` | Play selected song (queues all visible songs and starts from selection) |
@@ -253,7 +254,7 @@ The Quick Play page has two modes selectable from the options pane: **Starred** 
 
 | Key | Action |
 |---|---|
-| `Tab` / `Left` / `Right` | Switch focus between playlists and songs |
+| `Tab` | Switch focus between playlists and songs |
 | `Up` / `k` | Move selection up |
 | `Down` / `j` | Move selection down |
 | `Enter` | Load playlist songs or play selected song |
