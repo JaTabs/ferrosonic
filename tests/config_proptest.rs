@@ -30,6 +30,7 @@ fn arb_config() -> impl Strategy<Value = Config> {
             any::<u32>(),
             any::<Option<i64>>(),
             any::<bool>(),
+            0u8..=100,
         ),
     )
         .prop_map(
@@ -51,6 +52,7 @@ fn arb_config() -> impl Strategy<Value = Config> {
                     rate_switch_delay_ms,
                     music_folder_id,
                     music_folder_chosen,
+                    volume,
                 ),
             )| Config {
                 base_url,
@@ -72,6 +74,7 @@ fn arb_config() -> impl Strategy<Value = Config> {
                 rate_switch_delay_ms,
                 music_folder_id,
                 music_folder_chosen,
+                volume,
             },
         )
 }
@@ -97,6 +100,7 @@ fn config_round_trips_through_toml() {
             prop_assert_eq!(parsed.scrobble, c.scrobble);
             prop_assert_eq!(parsed.notifications, c.notifications);
             prop_assert_eq!(parsed.rate_switch_delay_ms, c.rate_switch_delay_ms);
+            prop_assert_eq!(parsed.volume, c.volume);
             Ok(())
         })
         .unwrap();

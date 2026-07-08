@@ -220,7 +220,11 @@ impl App {
                     && (m == KeyModifiers::NONE || m == KeyModifiers::SHIFT) =>
             {
                 let step = if m == KeyModifiers::SHIFT { 10.0 } else { 5.0 };
-                let offset = if key.code == KeyCode::Left { -step } else { step };
+                let offset = if key.code == KeyCode::Left {
+                    -step
+                } else {
+                    step
+                };
                 let _ = state;
                 drop(cs);
                 drop(ds);
@@ -228,6 +232,20 @@ impl App {
                     .client
                     .request(DaemonRequest::SeekRelative(offset))
                     .await;
+                return Ok(());
+            }
+            // Volume ±5%. `=` is the unshifted `+` key on US layouts.
+            (KeyCode::Char(c @ ('+' | '=' | '-')), m)
+                if m.is_empty() || m == KeyModifiers::SHIFT =>
+            {
+                let cur = i32::from(state.daemon.config.volume);
+                let target = if c == '-' { cur - 5 } else { cur + 5 }.clamp(0, 100);
+                let _ = state;
+                drop(cs);
+                drop(ds);
+                if target != cur {
+                    let _ = self.client.request(DaemonRequest::SetVolume(target)).await;
+                }
                 return Ok(());
             }
             (KeyCode::Char('n'), KeyModifiers::NONE) => {

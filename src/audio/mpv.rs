@@ -82,6 +82,10 @@ pub struct MpvController {
     /// `(major, minor)` from `mpv-version`, probed on connect. `None` until
     /// probed or if the probe fails; gates the 0.38+ 5-arg loadfile form.
     mpv_version: Option<(u16, u16)>,
+    /// Last volume set through this controller. Re-applied on every
+    /// (re)connect: a respawned mpv starts back at 100 and would otherwise
+    /// blast the user's ears mid-session.
+    last_volume: Option<i32>,
 }
 
 /// Parse `(major, minor)` from an mpv version string such as `mpv 0.41.0`.
@@ -124,6 +128,7 @@ impl MpvController {
             reader_handle: None,
             event_tx,
             mpv_version: None,
+            last_volume: None,
         }
     }
 
@@ -258,6 +263,11 @@ impl MpvController {
 
         self.mpv_version = self.probe_mpv_version().await;
         debug!("Connected to MPV socket (version {:?})", self.mpv_version);
+        if let Some(vol) = self.last_volume {
+            if let Err(e) = self.set_volume(vol).await {
+                warn!("Could not re-apply volume {} on connect: {}", vol, e);
+            }
+        }
         Ok(())
     }
 
@@ -620,12 +630,10 @@ impl MpvController {
     /// Returns an `AudioError` if the mpv IPC command fails.
     pub async fn set_volume(&mut self, volume: i32) -> Result<(), AudioError> {
         debug!("Setting volume to {}", volume);
-        self.send_command(vec![
-            json!("set_property"),
-            json!("volume"),
-            json!(volume.clamp(0, 100)),
-        ])
-        .await?;
+        let clamped = volume.clamp(0, 100);
+        self.last_volume = Some(clamped);
+        self.send_command(vec![json!("set_property"), json!("volume"), json!(clamped)])
+            .await?;
         Ok(())
     }
 

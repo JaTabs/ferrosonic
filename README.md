@@ -4,10 +4,11 @@ A terminal Subsonic music client written in Rust: bit-perfect audio, gapless pla
 
 It is a ground-up Rust rewrite of [Termsonic](https://git.sixfoisneuf.fr/termsonic/about/) (a Go client by [SixFoisNeuf](https://www.sixfoisneuf.fr/posts/termsonic-a-terminal-client-for-subsonic/)), adding PipeWire sample-rate switching, MPRIS2 controls, themes, and mouse support.
 
-> **About this fork** ([upstream: jaidaken/ferrosonic](https://github.com/jaidaken/ferrosonic)) — adds two features on top of upstream:
+> **About this fork** ([upstream: jaidaken/ferrosonic](https://github.com/jaidaken/ferrosonic)) — adds three features on top of upstream:
 >
 > - **Quick-play search**: press `/` in the Library, type a song title, hit `Enter` — the best title match plays immediately (`Tab` keeps the old browse-the-results behavior).
 > - **Arrow-key seeking**: `←`/`→` seek back/forward 5 seconds anywhere in the app; hold `Shift` for 10-second jumps.
+> - **Volume slider**: a `♪` slider next to the progress bar. `+`/`-` step ±5%, the mouse wheel over Now Playing does the same, and the bar itself is click-and-drag. The value persists across restarts and shows green only at 100% — mpv's unity gain, where output stays bit-perfect.
 >
 > To get them, [build from source](#build-from-source) from this repo — the Quick Install script downloads the upstream binary, which does not include them.
 

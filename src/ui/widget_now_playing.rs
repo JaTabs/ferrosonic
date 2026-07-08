@@ -20,6 +20,9 @@ pub struct NowPlayingWidget<'a> {
     /// caller can render cover art there. Progress bar still spans
     /// the full inner width below the reserved region.
     art_reserved_cols: u16,
+    /// Volume percentage shown by the slider at the right of the
+    /// progress row.
+    volume: u8,
 }
 
 impl<'a> NowPlayingWidget<'a> {
@@ -31,7 +34,15 @@ impl<'a> NowPlayingWidget<'a> {
             focused: false,
             colors,
             art_reserved_cols: 0,
+            volume: 100,
         }
+    }
+
+    /// Builder: volume percentage for the slider.
+    #[must_use]
+    pub const fn volume(mut self, volume: u8) -> Self {
+        self.volume = volume;
+        self
     }
 
     /// Builder: mark the pane focused for border styling.
@@ -140,6 +151,7 @@ impl Widget for NowPlayingWidget<'_> {
             self.now_playing.progress_percent(),
             &self.now_playing.format_position(),
             &self.now_playing.format_duration(),
+            self.volume,
             &self.colors,
         );
     }
@@ -246,38 +258,88 @@ fn render_info(
     }
 }
 
-/// Paint the playback progress bar into `area`.
+/// Volume slider bar width in cells.
+pub const VOLUME_BAR_WIDTH: u16 = 10;
+/// Full slider block: `" ♪ "` + bar + `" 100%"`.
+const VOLUME_BLOCK_WIDTH: u16 = 3 + VOLUME_BAR_WIDTH + 5;
+/// Rows narrower than this drop the volume slider so the progress bar
+/// keeps a usable width.
+const VOLUME_MIN_ROW_WIDTH: u16 = 55;
+
+/// Column layout of the progress row, relative to the row's left edge.
+/// The renderer and mouse hit-testing both derive geometry from here so
+/// clicks always land where the bars were painted.
+#[derive(Debug, Clone, Copy)]
+pub struct ProgressRowLayout {
+    /// X offset of the first time-string cell.
+    pub time_start: u16,
+    /// X offset of the first progress-bar cell.
+    pub bar_start: u16,
+    /// Progress bar width in cells.
+    pub bar_width: u16,
+    /// X offset of the first volume-bar cell; `None` when the row is too
+    /// narrow for the volume slider.
+    pub vol_bar_start: Option<u16>,
+    /// Volume bar width in cells.
+    pub vol_bar_width: u16,
+}
+
+/// Compute the progress-row layout for a row `width` cells wide whose
+/// time string (`"MM:SS / MM:SS"`) occupies `time_width` cells. `None`
+/// when the row is too narrow to draw anything.
+#[must_use]
+pub fn progress_row_layout(width: u16, time_width: u16) -> Option<ProgressRowLayout> {
+    if width < 15 {
+        return None;
+    }
+    let vol_block = if width >= VOLUME_MIN_ROW_WIDTH {
+        VOLUME_BLOCK_WIDTH
+    } else {
+        0
+    };
+    let bar_width = width.saturating_sub(time_width + 3 + vol_block);
+    let total_width = time_width + 2 + bar_width + vol_block;
+    let time_start = width.saturating_sub(total_width) / 2;
+    let bar_start = time_start + time_width + 2;
+    let vol_bar_start = (vol_block > 0).then_some(bar_start + bar_width + 3);
+    Some(ProgressRowLayout {
+        time_start,
+        bar_start,
+        bar_width,
+        vol_bar_start,
+        vol_bar_width: VOLUME_BAR_WIDTH,
+    })
+}
+
+/// Paint the playback progress bar (and the volume slider, when the row
+/// is wide enough) into `area`.
 pub fn render_progress_bar(
     area: Rect,
     buf: &mut Buffer,
     progress: f64,
     pos: &str,
     dur: &str,
+    volume: u8,
     colors: &ThemeColors,
 ) {
-    if area.width < 15 {
-        return;
-    }
-
     let time_str = format!("{pos} / {dur}");
     let time_width = crate::num::u16_sat(time_str.len());
-
-    let bar_width = area.width.saturating_sub(time_width + 3);
-    let total_width = time_width + 2 + bar_width;
-    let start_x = area.x + (area.width.saturating_sub(total_width)) / 2;
+    let Some(row) = progress_row_layout(area.width, time_width) else {
+        return;
+    };
 
     buf.set_string(
-        start_x,
+        area.x + row.time_start,
         area.y,
         &time_str,
         Style::default().fg(colors.highlight_fg),
     );
 
-    let bar_start = start_x + time_width + 2;
-    if bar_width > 0 {
+    let bar_start = area.x + row.bar_start;
+    if row.bar_width > 0 {
         // f64->u16 `as` saturates; bar_width*progress(0.0..=1.0) is bounded by bar_width.
         #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-        let filled = (f64::from(bar_width) * progress) as u16;
+        let filled = (f64::from(row.bar_width) * progress) as u16;
 
         for x in bar_start..(bar_start + filled) {
             buf[(x, area.y)]
@@ -285,10 +347,52 @@ pub fn render_progress_bar(
                 .set_style(Style::default().fg(colors.success));
         }
 
-        for x in (bar_start + filled)..(bar_start + bar_width) {
+        for x in (bar_start + filled)..(bar_start + row.bar_width) {
             buf[(x, area.y)]
                 .set_char('─')
                 .set_style(Style::default().fg(colors.muted));
         }
     }
+
+    if let Some(vol_start) = row.vol_bar_start {
+        render_volume_slider(area, buf, vol_start, row.vol_bar_width, volume, colors);
+    }
+}
+
+/// Paint `♪ ━━━───  65%` at `vol_start` (relative to `area`). The bar is
+/// green only at 100% — mpv's unity gain, where output stays bit-perfect.
+fn render_volume_slider(
+    area: Rect,
+    buf: &mut Buffer,
+    vol_start: u16,
+    bar_width: u16,
+    volume: u8,
+    colors: &ThemeColors,
+) {
+    let volume = volume.min(100);
+    let vx = area.x + vol_start;
+    buf.set_string(vx - 2, area.y, "♪", Style::default().fg(colors.muted));
+
+    // Integer rounding of volume% to bar cells; bounded by bar_width.
+    let filled = crate::num::u16_sat((u32::from(volume) * u32::from(bar_width) + 50) / 100);
+    let fill_style = if volume == 100 {
+        Style::default().fg(colors.success)
+    } else {
+        Style::default().fg(colors.accent)
+    };
+    for x in vx..(vx + filled) {
+        buf[(x, area.y)].set_char('━').set_style(fill_style);
+    }
+    for x in (vx + filled)..(vx + bar_width) {
+        buf[(x, area.y)]
+            .set_char('─')
+            .set_style(Style::default().fg(colors.muted));
+    }
+
+    buf.set_string(
+        vx + bar_width + 1,
+        area.y,
+        format!("{volume:>3}%"),
+        Style::default().fg(colors.muted),
+    );
 }

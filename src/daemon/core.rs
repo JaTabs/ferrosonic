@@ -295,8 +295,20 @@ impl DaemonCore {
     /// # Errors
     /// Returns an `Error` if the underlying operation fails.
     pub async fn start_mpv(&self) -> Result<(), Error> {
+        {
+            let mut mpv = self.mpv.lock().await;
+            mpv.start().await?;
+        }
+        self.apply_config_volume().await;
+        Ok(())
+    }
+
+    /// Push the persisted config volume to mpv. Runs after mpv (re)starts so
+    /// a boot honors the saved volume instead of mpv's default 100.
+    pub async fn apply_config_volume(&self) {
+        let vol = i32::from(self.state.read().await.config.volume);
         let mut mpv = self.mpv.lock().await;
-        mpv.start().await.map_err(Into::into)
+        let _ = mpv.set_volume(vol).await;
     }
 
     /// Spawn the task that converts mpv end-file events into auto-advance.
