@@ -15,10 +15,79 @@ impl App {
 
         match mouse.kind {
             MouseEventKind::Down(MouseButton::Left) => self.handle_mouse_click(x, y).await,
-            MouseEventKind::ScrollUp => self.handle_mouse_scroll_up().await,
-            MouseEventKind::ScrollDown => self.handle_mouse_scroll_down().await,
+            // Dragging only drives the volume slider; dragging across the
+            // progress bar must not spam seeks.
+            MouseEventKind::Drag(MouseButton::Left) => {
+                if let Some(vol) = self.volume_slider_hit(x, y).await {
+                    return self
+                        .client
+                        .request(DaemonRequest::SetVolume(vol))
+                        .await
+                        .map(|_| ())
+                        .map_err(Error::from);
+                }
+                Ok(())
+            }
+            MouseEventKind::ScrollUp => {
+                if self.over_now_playing(y).await {
+                    return self.step_volume(5).await;
+                }
+                self.handle_mouse_scroll_up().await
+            }
+            MouseEventKind::ScrollDown => {
+                if self.over_now_playing(y).await {
+                    return self.step_volume(-5).await;
+                }
+                self.handle_mouse_scroll_down().await
+            }
             _ => Ok(()),
         }
+    }
+
+    /// Target volume for a pointer at `(x, y)`, when it lands on the
+    /// volume bar of the now-playing progress row.
+    async fn volume_slider_hit(&self, x: u16, y: u16) -> Option<i32> {
+        let (area, time_width) = {
+            let ds = self.daemon_state.read().await;
+            let cs = self.client_state.read().await;
+            let np = &ds.now_playing;
+            let time = format!("{} / {}", np.format_position(), np.format_duration());
+            (cs.layout.now_playing, crate::num::u16_sat(time.len()))
+        };
+        if area.height < 2 || y != area.y + area.height - 2 {
+            return None;
+        }
+        let row = crate::ui::widget_now_playing::progress_row_layout(
+            area.width.saturating_sub(2),
+            time_width,
+        )?;
+        let vol_start = row.vol_bar_start?;
+        let rel_x = x.checked_sub(area.x + 1)?;
+        if rel_x < vol_start || rel_x >= vol_start + row.vol_bar_width {
+            return None;
+        }
+        let fraction = f64::from(rel_x - vol_start) / f64::from(row.vol_bar_width - 1);
+        // f64->i32 `as` saturates; fraction is 0.0..=1.0.
+        #[allow(clippy::cast_possible_truncation)]
+        Some((fraction * 100.0).round() as i32)
+    }
+
+    async fn over_now_playing(&self, y: u16) -> bool {
+        let area = self.client_state.read().await.layout.now_playing;
+        area.height > 0 && y >= area.y && y < area.y + area.height
+    }
+
+    async fn step_volume(&self, delta: i32) -> Result<(), Error> {
+        let cur = i32::from(self.daemon_state.read().await.config.volume);
+        let target = (cur + delta).clamp(0, 100);
+        if target == cur {
+            return Ok(());
+        }
+        self.client
+            .request(DaemonRequest::SetVolume(target))
+            .await
+            .map(|_| ())
+            .map_err(Error::from)
     }
 
     // Cohesive single match/render; splitting would fragment one logical unit.
@@ -39,6 +108,14 @@ impl App {
         let layout = state.client.layout.clone();
         let page = state.client.page;
         let duration = state.daemon.now_playing.duration;
+        let time_width = crate::num::u16_sat(
+            format!(
+                "{} / {}",
+                state.daemon.now_playing.format_position(),
+                state.daemon.now_playing.format_duration()
+            )
+            .len(),
+        );
         let _ = state;
         drop(cs);
         drop(ds);
@@ -103,19 +180,26 @@ impl App {
         }
 
         if y >= layout.now_playing.y && y < layout.now_playing.y + layout.now_playing.height {
-            let inner_bottom = layout.now_playing.y + layout.now_playing.height - 2;
-            if y == inner_bottom && duration > 0.0 {
-                let inner_x_start = layout.now_playing.x + 1;
-                let inner_width = layout.now_playing.width.saturating_sub(2);
-                if inner_width > 15 && x >= inner_x_start {
-                    let rel_x = x - inner_x_start;
-                    let time_width = 15u16;
-                    let bar_width = inner_width.saturating_sub(time_width + 2);
-                    let bar_start = (inner_width.saturating_sub(time_width + 2 + bar_width)) / 2
-                        + time_width
-                        + 2;
-                    if bar_width > 0 && rel_x >= bar_start && rel_x < bar_start + bar_width {
-                        let fraction = f64::from(rel_x - bar_start) / f64::from(bar_width);
+            if let Some(vol) = self.volume_slider_hit(x, y).await {
+                return self
+                    .client
+                    .request(DaemonRequest::SetVolume(vol))
+                    .await
+                    .map(|_| ())
+                    .map_err(Error::from);
+            }
+            let area = layout.now_playing;
+            if area.height >= 2 && y == area.y + area.height - 2 && duration > 0.0 {
+                let row = crate::ui::widget_now_playing::progress_row_layout(
+                    area.width.saturating_sub(2),
+                    time_width,
+                );
+                if let (Some(row), Some(rel_x)) = (row, x.checked_sub(area.x + 1)) {
+                    if row.bar_width > 0
+                        && rel_x >= row.bar_start
+                        && rel_x < row.bar_start + row.bar_width
+                    {
+                        let fraction = f64::from(rel_x - row.bar_start) / f64::from(row.bar_width);
                         let seek_pos = fraction * duration;
                         let _ = self
                             .client

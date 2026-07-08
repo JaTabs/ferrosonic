@@ -191,18 +191,20 @@ fn art_rect_handles_zero_cell_size_via_max_one() {
 #[test]
 fn render_progress_bar_renders_filled_segment() {
     let mut buf = Buffer::empty(Rect::new(0, 0, 60, 1));
-    render_progress_bar(buf.area, &mut buf, 0.5, "01:00", "02:00", &colors());
+    render_progress_bar(buf.area, &mut buf, 0.5, "01:00", "02:00", 65, &colors());
     let s = buf_to_string(&buf);
     assert!(s.contains('━'));
     assert!(s.contains('─'));
     assert!(s.contains("01:00"));
     assert!(s.contains("02:00"));
+    assert!(s.contains("65%"), "volume slider on the progress row: {s}");
 }
 
 #[test]
 fn render_progress_bar_at_zero_progress_is_all_unfilled() {
     let mut buf = Buffer::empty(Rect::new(0, 0, 60, 1));
-    render_progress_bar(buf.area, &mut buf, 0.0, "00:00", "03:00", &colors());
+    // Volume 0 keeps the whole row (progress + volume bar) unfilled.
+    render_progress_bar(buf.area, &mut buf, 0.0, "00:00", "03:00", 0, &colors());
     let s = buf_to_string(&buf);
     assert!(!s.contains('━'));
     assert!(s.contains('─'));
@@ -211,7 +213,8 @@ fn render_progress_bar_at_zero_progress_is_all_unfilled() {
 #[test]
 fn render_progress_bar_at_one_progress_is_all_filled() {
     let mut buf = Buffer::empty(Rect::new(0, 0, 60, 1));
-    render_progress_bar(buf.area, &mut buf, 1.0, "03:00", "03:00", &colors());
+    // Volume 100 keeps the whole row (progress + volume bar) filled.
+    render_progress_bar(buf.area, &mut buf, 1.0, "03:00", "03:00", 100, &colors());
     let s = buf_to_string(&buf);
     assert!(s.contains('━'));
     assert!(!s.contains('─'));
@@ -220,7 +223,7 @@ fn render_progress_bar_at_one_progress_is_all_filled() {
 #[test]
 fn render_progress_bar_returns_early_when_too_narrow() {
     let mut buf = Buffer::empty(Rect::new(0, 0, 14, 1));
-    render_progress_bar(buf.area, &mut buf, 0.5, "01:00", "02:00", &colors());
+    render_progress_bar(buf.area, &mut buf, 0.5, "01:00", "02:00", 100, &colors());
     let s = buf_to_string(&buf);
     assert!(!s.contains('━'));
     assert!(!s.contains('─'));

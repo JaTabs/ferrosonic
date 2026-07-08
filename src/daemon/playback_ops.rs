@@ -474,15 +474,26 @@ impl DaemonCore {
         Ok(())
     }
 
-    /// Set mpv volume as a percentage.
+    /// Set mpv volume as a percentage, clamped to 0-100. Persists the value
+    /// and broadcasts `ConfigChanged` so every client's slider follows.
     ///
     /// # Errors
-    /// Returns an `Error` if mpv control or a server request fails.
-    // significant_drop_tightening: tokio guard held to scope; not tightened (early-drop is borrow-blocked, spans a trailing await, or saves nothing before return).
-    #[allow(clippy::significant_drop_tightening)]
+    /// Returns an `Error` if persisting the config fails.
     pub async fn set_volume(self: &Arc<Self>, vol: i32) -> Result<(), Error> {
-        let mut mpv = self.mpv.lock().await;
-        let _ = mpv.set_volume(vol).await;
+        let clamped = vol.clamp(0, 100);
+        // i32->u8 `as` after the clamp to 0..=100 is lossless.
+        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+        let vol_u8 = clamped as u8;
+        {
+            let mut state = self.state.write().await;
+            state.config.volume = vol_u8;
+            state.config.save_default().map_err(Error::Config)?;
+        }
+        {
+            let mut mpv = self.mpv.lock().await;
+            let _ = mpv.set_volume(clamped).await;
+        }
+        self.emit_config_changed().await;
         Ok(())
     }
 }

@@ -336,7 +336,8 @@ impl PlayerInterface for MprisPlayer {
     }
 
     async fn volume(&self) -> fdo::Result<Volume> {
-        Ok(1.0)
+        let (_, _, config) = self.get_state().await;
+        Ok(f64::from(config.volume) / 100.0)
     }
 
     // f64->i32 `as` saturates; volume is the 0.0..=1.0 MPRIS range, so 0..=100.
@@ -432,6 +433,8 @@ pub struct MprisPropertySnapshot {
     pub cover_id: Option<String>,
     /// Track metadata, when a song is loaded.
     pub metadata: Option<Metadata>,
+    /// Playback volume in the MPRIS 0.0..=1.0 range.
+    pub volume: f64,
 }
 
 /// Pure: builds the property snapshot from daemon state.
@@ -457,6 +460,7 @@ pub async fn build_property_snapshot(daemon_state: &SharedDaemonState) -> MprisP
     };
 
     let cover_id = current_song.as_ref().and_then(Child::cover_id);
+    let volume = f64::from(config.volume) / 100.0;
     let metadata = current_song.map(|song| build_metadata_for(&song, &config));
 
     MprisPropertySnapshot {
@@ -466,6 +470,7 @@ pub async fn build_property_snapshot(daemon_state: &SharedDaemonState) -> MprisP
         can_play,
         cover_id,
         metadata,
+        volume,
     }
 }
 
@@ -509,6 +514,7 @@ pub async fn update_mpris_properties(
             Property::CanGoNext(snap.can_go_next),
             Property::CanGoPrevious(snap.can_go_prev),
             Property::CanPlay(snap.can_play),
+            Property::Volume(snap.volume),
         ])
         .await?;
 

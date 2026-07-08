@@ -64,6 +64,7 @@ impl<'a> Footer<'a> {
             ("p/Space".into(), "Pause".into()),
             ("h".into(), "Prev".into()),
             ("l".into(), "Next".into()),
+            ("+/-".into(), "Vol".into()),
             ("r".into(), repeat_label),
             ("Shift+T".into(), "Shuffle library".into()),
         ];

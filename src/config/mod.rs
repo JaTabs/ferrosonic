@@ -34,6 +34,7 @@ pub const KNOWN_CONFIG_KEYS: &[&str] = &[
     "RateSwitchDelayMs",
     "MusicFolderId",
     "MusicFolderChosen",
+    "Volume",
 ];
 
 /// A command run to obtain the password: a shell string or an argv array.
@@ -147,6 +148,11 @@ pub struct Config {
     /// to the server's first (default) library rather than all libraries.
     #[serde(rename = "MusicFolderChosen", default)]
     pub music_folder_chosen: bool,
+
+    /// Playback volume percentage (0-100). 100 is mpv's unity gain: samples
+    /// pass through untouched, preserving bit-perfect output.
+    #[serde(rename = "Volume", default = "Config::default_volume")]
+    pub volume: u8,
 }
 
 // Serialization mirror of Config; same independent TOML setting keys.
@@ -194,6 +200,8 @@ struct ConfigOnDisk<'a> {
         skip_serializing_if = "std::ops::Not::not"
     )]
     music_folder_chosen: bool,
+    #[serde(rename = "Volume")]
+    volume: u8,
 }
 
 // Serializes the revealed secret. Replaces a serialize_with fn whose
@@ -236,6 +244,7 @@ impl Config {
             rate_switch_delay_ms: self.rate_switch_delay_ms,
             music_folder_id: self.music_folder_id,
             music_folder_chosen: self.music_folder_chosen,
+            volume: self.volume,
         }
     }
 }
@@ -369,6 +378,7 @@ impl Default for Config {
             music_folder_chosen: false,
             password_eval: None,
             password_keyring: false,
+            volume: Self::default_volume(),
         }
     }
 }
@@ -396,6 +406,10 @@ impl Config {
 
     const fn default_rate_switch_delay_ms() -> u32 {
         500
+    }
+
+    const fn default_volume() -> u8 {
+        100
     }
 
     /// Alias for [`Config::default`].

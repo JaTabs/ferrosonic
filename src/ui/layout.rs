@@ -125,8 +125,9 @@ pub fn draw(
         0
     };
 
-    let now_playing =
-        NowPlayingWidget::new(&state.daemon.now_playing, colors).art_reserved_cols(art_cols);
+    let now_playing = NowPlayingWidget::new(&state.daemon.now_playing, colors)
+        .art_reserved_cols(art_cols)
+        .volume(state.daemon.config.volume);
     frame.render_widget(now_playing, now_playing_area);
 
     if art_visible {
