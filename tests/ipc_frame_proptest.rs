@@ -1,7 +1,8 @@
 //! Property tests for IPC frame round-trip across many variants.
 
 use ferrosonic::ipc::frame::{read_frame, write_frame, Frame};
-use ferrosonic::ipc::protocol::{DaemonRequest, DaemonResponse, EnqueueMode};
+use ferrosonic::ipc::protocol::{DaemonRequest, DaemonResponse, EnqueueMode, LyricsResult};
+use ferrosonic::subsonic::models::{LyricLine, StructuredLyrics};
 use proptest::prelude::*;
 
 fn arb_enqueue_mode() -> impl Strategy<Value = EnqueueMode> {
@@ -39,6 +40,7 @@ fn arb_request() -> impl Strategy<Value = DaemonRequest> {
         any::<String>().prop_map(DaemonRequest::LoadArtist),
         any::<String>().prop_map(DaemonRequest::LoadAlbum),
         any::<String>().prop_map(DaemonRequest::LoadPlaylist),
+        any::<String>().prop_map(|song_id| DaemonRequest::GetLyrics { song_id }),
         any::<bool>().prop_map(DaemonRequest::SetCavaEnabled),
         any::<u8>().prop_map(DaemonRequest::SetCavaSize),
         any::<bool>().prop_map(DaemonRequest::SetDaemonEnabled),
@@ -52,6 +54,22 @@ fn arb_request() -> impl Strategy<Value = DaemonRequest> {
     ]
 }
 
+fn arb_lyrics_result() -> impl Strategy<Value = LyricsResult> {
+    prop_oneof![
+        Just(LyricsResult::Empty),
+        Just(LyricsResult::Unsupported),
+        Just(LyricsResult::Unavailable),
+        Just(LyricsResult::Available(StructuredLyrics {
+            synced: true,
+            line: vec![LyricLine {
+                start: Some(1234),
+                value: "line".into(),
+            }],
+            ..StructuredLyrics::default()
+        })),
+    ]
+}
+
 fn arb_response() -> impl Strategy<Value = DaemonResponse> {
     prop_oneof![
         Just(DaemonResponse::Ok),
@@ -59,6 +77,8 @@ fn arb_response() -> impl Strategy<Value = DaemonResponse> {
         (any::<bool>(), any::<String>())
             .prop_map(|(ok, message)| DaemonResponse::ConnectionTestResult { ok, message }),
         (0usize..100000).prop_map(DaemonResponse::HistoryCleared),
+        (any::<String>(), arb_lyrics_result())
+            .prop_map(|(song_id, result)| DaemonResponse::Lyrics { song_id, result }),
         any::<Vec<u8>>().prop_map(DaemonResponse::CoverArt),
         Just(DaemonResponse::Pong),
     ]

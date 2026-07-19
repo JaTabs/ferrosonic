@@ -149,6 +149,11 @@ pub struct DaemonCore {
     queue_save_tx: tokio::sync::mpsc::Sender<()>,
     /// Bounded at `COVER_ART_CACHE_CAP`, keyed `"<coverArt-id>@<size>"`.
     pub(super) cover_art_cache: RwLock<crate::daemon::library::LruCache<Vec<u8>>>,
+    /// In-memory lyrics outcomes, keyed by Subsonic song ID.
+    pub(super) lyrics_cache:
+        RwLock<std::collections::HashMap<String, crate::ipc::protocol::LyricsResult>>,
+    /// Memoized support for the OpenSubsonic `songLyrics` extension.
+    pub(super) song_lyrics_supported: RwLock<Option<bool>>,
     /// Cancellation flag for the in-flight pre-buffer task. Replaced
     /// (and the old one flipped) on each new request so rapid track
     /// switches don't stack downloads.
@@ -244,6 +249,8 @@ impl DaemonCore {
             event_tx,
             queue_save_tx,
             cover_art_cache: RwLock::new(crate::daemon::library::LruCache::new()),
+            lyrics_cache: RwLock::new(std::collections::HashMap::new()),
+            song_lyrics_supported: RwLock::new(None),
             prebuffer_cancel: Arc::new(Mutex::new(None)),
             prebuffer_files: Mutex::new(Vec::new()),
             prebuffer_loading: Mutex::new(None),

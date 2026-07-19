@@ -133,6 +133,10 @@ impl DaemonClient for InProcessClient {
             DaemonRequest::LoadPlaylist(id) => Ok(DaemonResponse::PlaylistSongs(
                 core.load_playlist_songs(&id).await,
             )),
+            DaemonRequest::GetLyrics { song_id } => Ok(DaemonResponse::Lyrics {
+                result: core.get_lyrics(&song_id).await,
+                song_id,
+            }),
             DaemonRequest::Search {
                 query,
                 artist_count,
