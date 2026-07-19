@@ -13,6 +13,7 @@ pub mod styled_lines;
 pub mod theme;
 mod theme_builtins;
 pub mod widget_cava;
+pub mod widget_lyrics;
 pub mod widget_now_playing;
 
 pub use layout::draw;

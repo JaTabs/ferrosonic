@@ -13,7 +13,10 @@ use super::cover_art::{self, CoverArtState};
 use super::footer::Footer;
 use super::header::Header;
 use super::pages;
-use super::{widget_cava::CavaWidget, widget_now_playing, widget_now_playing::NowPlayingWidget};
+use super::{
+    widget_cava::CavaWidget, widget_lyrics::LyricsWidget, widget_now_playing,
+    widget_now_playing::NowPlayingWidget,
+};
 
 const NOW_PLAYING_BASE: u16 = 7;
 
@@ -55,26 +58,55 @@ pub fn draw(
         Page::Settings | Page::Server => 20,
         _ => 8,
     };
-    let (header_area, cava_area, content_area, now_playing_area, footer_area) = if cava_active {
-        let chunks = Layout::vertical([
-            Constraint::Length(1),
-            Constraint::Percentage(band_pct),
-            Constraint::Min(content_min),
-            Constraint::Length(now_playing_h),
-            Constraint::Length(2),
-        ])
-        .split(area);
-        (chunks[0], Some(chunks[1]), chunks[2], chunks[3], chunks[4])
+    let fixed_height = 1 + now_playing_h + 2;
+    let available = area.height.saturating_sub(fixed_height);
+    let requested_lyrics_h = if state.client.lyrics.open {
+        available.saturating_sub(content_min).min(10)
     } else {
-        let chunks = Layout::vertical([
-            Constraint::Length(1),
-            Constraint::Min(content_min),
-            Constraint::Length(now_playing_h),
-            Constraint::Length(2),
-        ])
-        .split(area);
-        (chunks[0], None, chunks[1], chunks[2], chunks[3])
+        0
     };
+    let lyrics_h = if requested_lyrics_h >= 3 {
+        requested_lyrics_h
+    } else {
+        0
+    };
+    let (header_area, cava_area, content_area, lyrics_area, now_playing_area, footer_area) =
+        if cava_active {
+            let chunks = Layout::vertical([
+                Constraint::Length(1),
+                Constraint::Percentage(band_pct),
+                Constraint::Min(content_min),
+                Constraint::Length(lyrics_h),
+                Constraint::Length(now_playing_h),
+                Constraint::Length(2),
+            ])
+            .split(area);
+            (
+                chunks[0],
+                Some(chunks[1]),
+                chunks[2],
+                (lyrics_h > 0).then_some(chunks[3]),
+                chunks[4],
+                chunks[5],
+            )
+        } else {
+            let chunks = Layout::vertical([
+                Constraint::Length(1),
+                Constraint::Min(content_min),
+                Constraint::Length(lyrics_h),
+                Constraint::Length(now_playing_h),
+                Constraint::Length(2),
+            ])
+            .split(area);
+            (
+                chunks[0],
+                None,
+                chunks[1],
+                (lyrics_h > 0).then_some(chunks[2]),
+                chunks[3],
+                chunks[4],
+            )
+        };
 
     let (content_left, content_right) = match state.client.page {
         Page::Library | Page::Playlists => {
@@ -115,6 +147,17 @@ pub fn draw(
         Page::Playlists => pages::playlists::render(frame, content_area, state),
         Page::Server => pages::server::render(frame, content_area, state),
         Page::Settings => pages::settings::render(frame, content_area, state),
+    }
+
+    if let Some(lyrics_area) = lyrics_area {
+        frame.render_widget(
+            LyricsWidget::new(
+                &state.client.lyrics,
+                state.daemon.now_playing.position,
+                colors,
+            ),
+            lyrics_area,
+        );
     }
 
     // 50/50 horizontal split when art is actually visible. When no
