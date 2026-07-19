@@ -162,6 +162,17 @@ pub struct PlaylistPicker {
     pub song: Option<Child>,
 }
 
+/// Name prompt for creating a playlist containing one target song.
+#[derive(Debug, Clone, Default)]
+pub struct CreatePlaylistPrompt {
+    /// True while the prompt is capturing input.
+    pub active: bool,
+    /// Playlist name being typed.
+    pub name: String,
+    /// Song to include when creation is confirmed.
+    pub song: Option<Child>,
+}
+
 /// UI state of the Server (credentials) page.
 #[derive(Clone, Default, Debug)]
 pub struct ServerState {

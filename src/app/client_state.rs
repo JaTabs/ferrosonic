@@ -3,8 +3,8 @@
 use std::time::Instant;
 
 use crate::app::state::{
-    ArtistsState, CavaRow, LayoutAreas, Notification, Page, PlaylistPicker, PlaylistsState,
-    QueueState, ServerState, SettingsState, SongsState,
+    ArtistsState, CavaRow, CreatePlaylistPrompt, LayoutAreas, Notification, Page, PlaylistPicker,
+    PlaylistsState, QueueState, ServerState, SettingsState, SongsState,
 };
 
 /// All client-local UI state; never leaves the TUI process.
@@ -24,6 +24,8 @@ pub struct ClientState {
     pub playlists: PlaylistsState,
     /// Add-to-playlist picker overlay, openable from any song pane.
     pub playlist_picker: PlaylistPicker,
+    /// Name prompt for creating a playlist containing one target song.
+    pub create_playlist_prompt: CreatePlaylistPrompt,
     /// Server credentials page state.
     pub server_state: ServerState,
     /// Settings page state.
@@ -60,6 +62,18 @@ impl ClientState {
         self.playlist_picker.active = true;
         self.playlist_picker.selected = 0;
         self.playlist_picker.song = Some(song);
+    }
+
+    /// Open the create-playlist name prompt for `song`.
+    pub fn open_create_playlist_prompt(&mut self, song: crate::subsonic::models::Child) {
+        self.create_playlist_prompt.active = true;
+        self.create_playlist_prompt.name.clear();
+        self.create_playlist_prompt.song = Some(song);
+    }
+
+    /// Close and clear the create-playlist prompt.
+    pub fn close_create_playlist_prompt(&mut self) {
+        self.create_playlist_prompt = CreatePlaylistPrompt::default();
     }
 
     /// Show an error-styled footer notification.
