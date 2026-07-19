@@ -150,4 +150,8 @@ pub fn draw(
     if state.client.playlist_picker.active {
         super::playlist_picker::render(frame, area, state, &colors);
     }
+
+    if state.client.create_playlist_prompt.active {
+        super::create_playlist_prompt::render(frame, area, state, &colors);
+    }
 }

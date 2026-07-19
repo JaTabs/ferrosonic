@@ -278,21 +278,6 @@ impl App {
                 drop(ds);
                 return self.move_playlist_song(-1).await;
             }
-            KeyCode::Char('a') if state.client.playlists.focus == 1 => {
-                let song = state
-                    .client
-                    .playlists
-                    .selected_song
-                    .and_then(|i| state.client.playlists.songs.get(i))
-                    .cloned();
-                if let Some(song) = song {
-                    if state.daemon.library.playlists.is_empty() {
-                        state.client.notify("No playlists to add to");
-                    } else {
-                        state.client.open_playlist_picker(song);
-                    }
-                }
-            }
             _ => {}
         }
 
@@ -386,13 +371,56 @@ impl App {
         Ok(())
     }
 
+    pub(super) async fn handle_create_playlist_prompt_key(
+        &self,
+        key: event::KeyEvent,
+    ) -> Result<(), Error> {
+        let mut cs = self.client_state.write().await;
+        match key.code {
+            KeyCode::Esc => cs.close_create_playlist_prompt(),
+            KeyCode::Backspace => {
+                cs.create_playlist_prompt.name.pop();
+            }
+            KeyCode::Char(c) => cs.create_playlist_prompt.name.push(c),
+            KeyCode::Enter => {
+                let name = cs.create_playlist_prompt.name.trim().to_string();
+                if name.is_empty() {
+                    cs.notify("Playlist name cannot be empty");
+                    return Ok(());
+                }
+                let Some(song) = cs.create_playlist_prompt.song.clone() else {
+                    cs.close_create_playlist_prompt();
+                    return Ok(());
+                };
+                drop(cs);
+                let result = self
+                    .client
+                    .request(DaemonRequest::CreatePlaylist {
+                        name,
+                        song_ids: vec![song.id],
+                    })
+                    .await;
+                let mut cs = self.client_state.write().await;
+                match result {
+                    Ok(crate::ipc::DaemonResponse::PlaylistCreated(playlist)) => {
+                        cs.close_create_playlist_prompt();
+                        cs.notify(format!("Created playlist: {}", playlist.name));
+                    }
+                    _ => cs.notify_error("Failed to create playlist"),
+                }
+            }
+            _ => {}
+        }
+        Ok(())
+    }
+
     pub(super) async fn handle_playlist_picker_key(
         &self,
         key: event::KeyEvent,
     ) -> Result<(), Error> {
         let ds = self.daemon_state.read().await;
         let mut cs = self.client_state.write().await;
-        let count = ds.library.playlists.len();
+        let count = ds.library.playlists.len() + 1;
         match key.code {
             KeyCode::Esc => {
                 cs.playlist_picker.active = false;
@@ -407,29 +435,52 @@ impl App {
                 }
             }
             KeyCode::Enter => {
+                let selected = cs.playlist_picker.selected;
+                let song = cs.playlist_picker.song.take();
+                cs.playlist_picker.active = false;
+                let Some(song) = song else { return Ok(()) };
+                if selected == 0 {
+                    cs.open_create_playlist_prompt(song);
+                    return Ok(());
+                }
                 let target = ds
                     .library
                     .playlists
-                    .get(cs.playlist_picker.selected)
-                    .map(|p| (p.id.clone(), p.name.clone()));
-                let song = cs.playlist_picker.song.clone();
-                cs.playlist_picker.active = false;
-                cs.playlist_picker.song = None;
-                if let (Some((playlist_id, pname)), Some(song)) = (target, song) {
-                    cs.notify(format!("Added '{}' to {}", song.title, pname));
+                    .get(selected - 1)
+                    .map(|playlist| (playlist.id.clone(), playlist.name.clone()));
+                if let Some((playlist_id, playlist_name)) = target {
                     drop(cs);
                     drop(ds);
-                    let _ = self
-                        .client
-                        .request(DaemonRequest::AddSongToPlaylist {
-                            playlist_id,
-                            song_id: song.id,
-                        })
+                    return self
+                        .add_song_to_playlist(song, playlist_id, playlist_name)
                         .await;
-                    return Ok(());
                 }
             }
             _ => {}
+        }
+        Ok(())
+    }
+
+    pub(super) async fn add_song_to_playlist(
+        &self,
+        song: crate::subsonic::models::Child,
+        playlist_id: String,
+        playlist_name: String,
+    ) -> Result<(), Error> {
+        let title = song.title.clone();
+        let result = self
+            .client
+            .request(DaemonRequest::AddSongToPlaylist {
+                playlist_id,
+                song_id: song.id,
+            })
+            .await;
+        let mut cs = self.client_state.write().await;
+        match result {
+            Ok(crate::ipc::DaemonResponse::PlaylistSongs(_)) => {
+                cs.notify(format!("Added '{title}' to {playlist_name}"));
+            }
+            _ => cs.notify_error("Failed to add song to playlist"),
         }
         Ok(())
     }

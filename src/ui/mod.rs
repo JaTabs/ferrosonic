@@ -2,6 +2,7 @@
 
 pub mod chafa_ext;
 pub mod cover_art;
+pub mod create_playlist_prompt;
 pub mod footer;
 pub mod header;
 pub mod layout;

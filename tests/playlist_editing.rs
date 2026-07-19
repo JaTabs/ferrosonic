@@ -287,6 +287,7 @@ async fn a_opens_picker_and_enter_adds_song_to_selected_playlist() {
             "a opens the add-to-playlist picker"
         );
     }
+    app.handle_key(key(KeyCode::Down)).await.unwrap();
     app.handle_key(key(KeyCode::Enter)).await.unwrap();
     {
         let cs = app.client_state.read().await;

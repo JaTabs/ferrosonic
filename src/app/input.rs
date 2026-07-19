@@ -85,6 +85,14 @@ impl App {
             }
         }
 
+        // Create-playlist prompt: while open, the overlay owns every key.
+        if state.client.create_playlist_prompt.active {
+            let _ = state;
+            drop(cs);
+            drop(ds);
+            return self.handle_create_playlist_prompt_key(key).await;
+        }
+
         // Add-to-playlist picker: while open, the overlay owns every key.
         if state.client.playlist_picker.active {
             let _ = state;
@@ -255,6 +263,56 @@ impl App {
                 drop(ds);
                 if let Some(id) = song_id {
                     let _ = self.client.request(DaemonRequest::ToggleStarSong(id)).await;
+                }
+                return Ok(());
+            }
+            (KeyCode::Char('A'), _) => {
+                let song = state.target_song().cloned();
+                let last = state
+                    .daemon
+                    .config
+                    .last_playlist_id
+                    .as_deref()
+                    .and_then(|id| {
+                        state
+                            .daemon
+                            .library
+                            .playlists
+                            .iter()
+                            .find(|playlist| playlist.id == id)
+                            .map(|playlist| (playlist.id.clone(), playlist.name.clone()))
+                    });
+                let has_playlists = !state.daemon.library.playlists.is_empty();
+                let Some(song) = song else {
+                    state.client.notify("Nothing to add");
+                    return Ok(());
+                };
+                if !has_playlists {
+                    state.client.open_create_playlist_prompt(song);
+                    return Ok(());
+                }
+                if let Some((playlist_id, playlist_name)) = last {
+                    let _ = state;
+                    drop(cs);
+                    drop(ds);
+                    return self
+                        .add_song_to_playlist(song, playlist_id, playlist_name)
+                        .await;
+                }
+                state.client.open_playlist_picker(song);
+                return Ok(());
+            }
+            (KeyCode::Char('a'), KeyModifiers::NONE) => {
+                let song = state.target_song().cloned();
+                let has_playlists = !state.daemon.library.playlists.is_empty();
+                let Some(song) = song else {
+                    state.client.notify("Nothing to add");
+                    return Ok(());
+                };
+                if has_playlists {
+                    state.client.open_playlist_picker(song);
+                } else {
+                    state.client.open_create_playlist_prompt(song);
                 }
                 return Ok(());
             }
