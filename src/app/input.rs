@@ -2,7 +2,7 @@ use crossterm::event::{self, Event, KeyCode, KeyModifiers};
 
 use crate::error::Error;
 
-use super::{App, AppState, DaemonRequest, Page};
+use super::{App, AppState, DaemonRequest, LyricsStatus, Page};
 
 impl App {
     /// Handle terminal events. Pub for integration tests; production
@@ -314,6 +314,30 @@ impl App {
                 } else {
                     state.client.open_create_playlist_prompt(song);
                 }
+                return Ok(());
+            }
+            (KeyCode::Char('y'), KeyModifiers::NONE) => {
+                state.client.lyrics.open = !state.client.lyrics.open;
+                if !state.client.lyrics.open {
+                    return Ok(());
+                }
+                let song_id = state
+                    .daemon
+                    .now_playing
+                    .song
+                    .as_ref()
+                    .map(|song| song.id.clone());
+                let Some(song_id) = song_id else {
+                    state.client.lyrics.song_id = None;
+                    state.client.lyrics.status = LyricsStatus::Idle;
+                    return Ok(());
+                };
+                let client = self.client.clone();
+                let client_state = self.client_state.clone();
+                let _ = state;
+                drop(cs);
+                drop(ds);
+                crate::app::event_pump::request_lyrics(client, client_state, song_id).await;
                 return Ok(());
             }
             (KeyCode::Char('T'), _) => {

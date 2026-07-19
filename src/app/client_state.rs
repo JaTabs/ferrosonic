@@ -3,8 +3,8 @@
 use std::time::Instant;
 
 use crate::app::state::{
-    ArtistsState, CavaRow, CreatePlaylistPrompt, LayoutAreas, Notification, Page, PlaylistPicker,
-    PlaylistsState, QueueState, ServerState, SettingsState, SongsState,
+    ArtistsState, CavaRow, CreatePlaylistPrompt, LayoutAreas, LyricsState, Notification, Page,
+    PlaylistPicker, PlaylistsState, QueueState, ServerState, SettingsState, SongsState,
 };
 
 /// All client-local UI state; never leaves the TUI process.
@@ -26,6 +26,8 @@ pub struct ClientState {
     pub playlist_picker: PlaylistPicker,
     /// Name prompt for creating a playlist containing one target song.
     pub create_playlist_prompt: CreatePlaylistPrompt,
+    /// Optional lyrics panel state.
+    pub lyrics: LyricsState,
     /// Server credentials page state.
     pub server_state: ServerState,
     /// Settings page state.

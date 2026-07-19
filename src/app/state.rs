@@ -11,8 +11,8 @@ use crate::config::Config;
 use crate::subsonic::models::Child;
 
 pub use crate::app::page_state::{
-    ArtistsState, CreatePlaylistPrompt, PlaylistPicker, PlaylistsState, QueueState, ServerState,
-    SettingsState, SongsState,
+    ArtistsState, CreatePlaylistPrompt, LyricsState, LyricsStatus, PlaylistPicker, PlaylistsState,
+    QueueState, ServerState, SettingsState, SongsState,
 };
 
 /// Top-level TUI page selected via the header tabs.

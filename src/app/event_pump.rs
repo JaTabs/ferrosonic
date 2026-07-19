@@ -5,9 +5,46 @@ use std::sync::Arc;
 use tokio::sync::broadcast;
 use tracing::{info, warn};
 
-use crate::app::state::{SharedClientState, SharedDaemonState};
+use crate::app::state::{LyricsStatus, SharedClientState, SharedDaemonState};
+use crate::ipc::protocol::LyricsResult;
 use crate::ipc::{DaemonClient, DaemonEvent, DaemonRequest, DaemonResponse};
 use crate::ui::cover_art::CoverArtState;
+
+/// Mark `song_id` loading and fetch it without blocking the input/event loop.
+pub async fn request_lyrics(
+    client: Arc<dyn DaemonClient>,
+    client_state: SharedClientState,
+    song_id: String,
+) {
+    {
+        let mut cs = client_state.write().await;
+        cs.lyrics.song_id = Some(song_id.clone());
+        cs.lyrics.status = LyricsStatus::Loading;
+    }
+    tokio::spawn(async move {
+        let response = client
+            .request(DaemonRequest::GetLyrics {
+                song_id: song_id.clone(),
+            })
+            .await;
+        let (response_song_id, status) = match response {
+            Ok(DaemonResponse::Lyrics { song_id, result }) => {
+                let status = match result {
+                    LyricsResult::Available(lyrics) => LyricsStatus::Ready(lyrics),
+                    LyricsResult::Empty => LyricsStatus::Empty,
+                    LyricsResult::Unsupported => LyricsStatus::Unsupported,
+                    LyricsResult::Unavailable => LyricsStatus::Unavailable,
+                };
+                (song_id, status)
+            }
+            _ => (song_id, LyricsStatus::Unavailable),
+        };
+        let mut cs = client_state.write().await;
+        if cs.lyrics.open && cs.lyrics.song_id.as_deref() == Some(response_song_id.as_str()) {
+            cs.lyrics.status = status;
+        }
+    });
+}
 
 pub(crate) async fn run_event_pump(
     client: Arc<dyn DaemonClient>,
@@ -55,7 +92,7 @@ pub async fn apply_event(
             ds.queue_position = position;
         }
         DaemonEvent::NowPlayingChanged(np) => {
-            apply_now_playing_changed(daemon_state, client, cover_art, *np).await;
+            apply_now_playing_changed(daemon_state, client_state, client, cover_art, *np).await;
         }
         DaemonEvent::PositionTick(pos) => {
             let mut ds = daemon_state.write().await;
@@ -149,10 +186,12 @@ pub async fn apply_event(
 /// Apply `NowPlayingChanged`: store the new now-playing and refresh cover art.
 async fn apply_now_playing_changed(
     daemon_state: &SharedDaemonState,
+    client_state: &SharedClientState,
     client: &Arc<dyn DaemonClient>,
     cover_art: &Arc<std::sync::Mutex<CoverArtState>>,
     np: crate::daemon::state::NowPlaying,
 ) {
+    let new_song_id = np.song.as_ref().map(|song| song.id.clone());
     let new_cover_id = np
         .song
         .as_ref()
@@ -163,6 +202,25 @@ async fn apply_now_playing_changed(
         ds.now_playing = np;
         enabled
     };
+    let lyrics_request = {
+        let mut cs = client_state.write().await;
+        match new_song_id {
+            None => {
+                cs.lyrics.song_id = None;
+                cs.lyrics.status = LyricsStatus::Idle;
+                None
+            }
+            Some(song_id)
+                if cs.lyrics.open && cs.lyrics.song_id.as_deref() != Some(song_id.as_str()) =>
+            {
+                Some(song_id)
+            }
+            Some(_) => None,
+        }
+    };
+    if let Some(song_id) = lyrics_request {
+        request_lyrics(client.clone(), client_state.clone(), song_id).await;
+    }
     if cover_art_enabled {
         if let Some(id) = new_cover_id {
             let should_fetch = {
