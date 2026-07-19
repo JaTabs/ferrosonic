@@ -43,6 +43,56 @@ pub struct OpenSubsonicExtension {
     pub versions: Vec<i32>,
 }
 
+/// One line of structured lyrics, optionally timestamped in milliseconds.
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
+pub struct LyricLine {
+    /// Line start in milliseconds for synchronized lyrics.
+    #[serde(default)]
+    pub start: Option<u64>,
+    /// Text displayed for this line.
+    #[serde(default)]
+    pub value: String,
+}
+
+/// One structured-lyrics variant returned for a song.
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
+pub struct StructuredLyrics {
+    /// Display artist supplied by the lyrics source.
+    #[serde(default, rename = "displayArtist")]
+    pub display_artist: Option<String>,
+    /// Display title supplied by the lyrics source.
+    #[serde(default, rename = "displayTitle")]
+    pub display_title: Option<String>,
+    /// Lyrics language code, when known.
+    #[serde(default)]
+    pub lang: Option<String>,
+    /// Timing offset in milliseconds.
+    #[serde(default)]
+    pub offset: i64,
+    /// Whether lines carry playback timestamps.
+    #[serde(default)]
+    pub synced: bool,
+    /// Lyrics lines in display order.
+    #[serde(default)]
+    pub line: Vec<LyricLine>,
+}
+
+/// Lyrics variants inside `getLyricsBySongId`.
+#[derive(Debug, Default, Deserialize)]
+pub struct LyricsList {
+    /// Structured lyrics variants returned by the server.
+    #[serde(default, rename = "structuredLyrics")]
+    pub structured_lyrics: Vec<StructuredLyrics>,
+}
+
+/// Payload of `getLyricsBySongId`.
+#[derive(Debug, Default, Deserialize)]
+pub struct LyricsListData {
+    /// Lyrics-list wrapper.
+    #[serde(default, rename = "lyricsList")]
+    pub lyrics_list: LyricsList,
+}
+
 /// Error object returned when a Subsonic call fails.
 #[derive(Debug, Deserialize)]
 pub struct ApiError {

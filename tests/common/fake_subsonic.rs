@@ -1,7 +1,7 @@
 //! Wiremock wrapper for the Subsonic REST API.
 
 use serde_json::{json, Value};
-use wiremock::matchers::{method, path};
+use wiremock::matchers::{method, path, query_param};
 use wiremock::{Mock, MockServer, ResponseTemplate};
 
 pub struct FakeSubsonic {
@@ -165,6 +165,15 @@ impl FakeSubsonic {
         Mock::given(method("GET"))
             .and(path("/rest/getOpenSubsonicExtensions"))
             .respond_with(ok_body(json!({ "openSubsonicExtensions": exts })))
+            .mount(&self.server)
+            .await;
+    }
+
+    pub async fn expect_lyrics(&self, song_id: &str, lyrics: Value) {
+        Mock::given(method("GET"))
+            .and(path("/rest/getLyricsBySongId"))
+            .and(query_param("id", song_id))
+            .respond_with(ok_body(json!({ "lyricsList": lyrics })))
             .mount(&self.server)
             .await;
     }
