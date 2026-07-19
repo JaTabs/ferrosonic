@@ -65,6 +65,7 @@ impl<'a> Footer<'a> {
             ("h".into(), "Prev".into()),
             ("l".into(), "Next".into()),
             ("+/-".into(), "Vol".into()),
+            ("A".into(), "Quick playlist".into()),
             ("r".into(), repeat_label),
             ("Shift+T".into(), "Shuffle library".into()),
         ];
@@ -80,11 +81,13 @@ impl<'a> Footer<'a> {
             Page::QuickPlay => vec![
                 s("n", "Star playing"),
                 s("m", "Star selected"),
+                s("a", "Choose playlist"),
                 s("Enter", "Play"),
             ],
             Page::Library => vec![
                 s("n", "Star playing"),
                 s("m", "Star selected"),
+                s("a", "Choose playlist"),
                 s("/", "Search"),
                 s("←/→", "Focus"),
                 s("v", "Albums/Artists"),
@@ -98,6 +101,7 @@ impl<'a> Footer<'a> {
             Page::Queue => vec![
                 s("n", "Star playing"),
                 s("m", "Star selected"),
+                s("a", "Choose playlist"),
                 s("d", "Remove"),
                 s("J/K", "Move"),
                 s("t", "Shuffle"),
@@ -108,7 +112,7 @@ impl<'a> Footer<'a> {
             Page::Playlists => vec![
                 s("Enter", "Play"),
                 s("e/i", "Queue"),
-                s("a", "→ Playlist"),
+                s("a", "Choose playlist"),
                 s("R", "Rename"),
                 s("D", "Delete"),
                 s("d", "Remove"),

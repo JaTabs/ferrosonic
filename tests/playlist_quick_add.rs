@@ -321,3 +321,18 @@ fn picker_and_create_prompt_render_their_distinct_actions() {
     assert!(prompt.contains("Create playlist"), "screen was:\n{prompt}");
     assert!(prompt.contains("Road Trip"), "screen was:\n{prompt}");
 }
+
+#[test]
+fn footer_documents_quick_and_chosen_playlist_actions() {
+    let daemon = DaemonState::new(Config::default());
+    let mut client = ClientState::default();
+    client.page = Page::Library;
+
+    let screen = render(200, 28, &daemon, &mut client);
+
+    assert!(screen.contains("A:Quick playlist"), "screen was:\n{screen}");
+    assert!(
+        screen.contains("a:Choose playlist"),
+        "screen was:\n{screen}"
+    );
+}

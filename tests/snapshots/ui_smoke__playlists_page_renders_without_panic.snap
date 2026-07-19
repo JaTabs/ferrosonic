@@ -25,4 +25,4 @@ expression: frame
 │                                                                              │
 └──────────────────────────────────────────────────────────────────────────────┘
 q:Quit │ p/Space:Pause │ h:Prev │ l:Next                                        
-Enter:Play │ e/i:Queue │ a:→ Playlist │
+Enter:Play │ e/i:Queue │ a:Choose playli
