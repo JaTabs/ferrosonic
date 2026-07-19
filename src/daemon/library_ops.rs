@@ -209,18 +209,29 @@ impl DaemonCore {
         self: &Arc<Self>,
         name: &str,
         song_ids: &[String],
-    ) -> Result<(), Error> {
+    ) -> Result<crate::subsonic::models::Playlist, Error> {
         let Some(client) = self.subsonic.read().await.clone() else {
             return Err(Error::Subsonic(crate::error::SubsonicError::Api {
                 code: 0,
                 message: "Subsonic client not configured".to_string(),
             }));
         };
-        client
+        let playlist = client
             .create_playlist(name, song_ids)
             .await
             .map_err(Error::Subsonic)?;
+        self.remember_playlist(&playlist.id).await?;
         self.refresh_playlists().await;
+        Ok(playlist)
+    }
+
+    async fn remember_playlist(self: &Arc<Self>, playlist_id: &str) -> Result<(), Error> {
+        {
+            let mut state = self.state.write().await;
+            state.config.last_playlist_id = Some(playlist_id.to_string());
+            state.config.save_default().map_err(Error::Config)?;
+        }
+        self.emit_config_changed().await;
         Ok(())
     }
 
@@ -276,6 +287,7 @@ impl DaemonCore {
             .playlist_add_song(playlist_id, song_id)
             .await
             .map_err(Error::Subsonic)?;
+        self.remember_playlist(playlist_id).await?;
         let songs = self.load_playlist_songs(playlist_id).await;
         self.refresh_playlists().await;
         Ok(songs)

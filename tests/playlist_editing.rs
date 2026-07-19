@@ -28,6 +28,60 @@ fn find<'a>(reqs: &'a [Request], path: &str) -> &'a Request {
 
 #[tokio::test]
 #[serial]
+async fn create_playlist_returns_real_id_and_persists_it() {
+    let td = TestDaemon::new().await;
+    td.fake_subsonic.expect_create_playlist().await;
+    td.fake_subsonic.expect_playlists().await;
+
+    let created = td
+        .core
+        .create_playlist("Road Trip", &["song-9".into()])
+        .await
+        .unwrap();
+
+    assert_eq!(created.id, "created-1");
+    assert_eq!(
+        td.state.read().await.config.last_playlist_id.as_deref(),
+        Some("created-1")
+    );
+}
+
+#[tokio::test]
+#[serial]
+async fn add_persists_destination_only_after_success() {
+    let td = TestDaemon::new().await;
+    td.fake_subsonic.expect_update_playlist().await;
+    td.fake_subsonic
+        .expect_get_playlist("pl-1", "Mix", &["a"])
+        .await;
+    td.fake_subsonic.expect_playlists().await;
+
+    td.core.playlist_add_song("pl-1", "song-9").await.unwrap();
+
+    assert_eq!(
+        td.state.read().await.config.last_playlist_id.as_deref(),
+        Some("pl-1")
+    );
+}
+
+#[tokio::test]
+#[serial]
+async fn failed_add_keeps_previous_destination() {
+    let td = TestDaemon::new().await;
+    td.state.write().await.config.last_playlist_id = Some("previous".into());
+    td.fake_subsonic
+        .expect_error("updatePlaylist", 70, "Not found")
+        .await;
+
+    assert!(td.core.playlist_add_song("gone", "song-9").await.is_err());
+    assert_eq!(
+        td.state.read().await.config.last_playlist_id.as_deref(),
+        Some("previous")
+    );
+}
+
+#[tokio::test]
+#[serial]
 async fn rename_sends_updateplaylist_with_id_and_name() {
     let td = TestDaemon::new().await;
     td.fake_subsonic.expect_update_playlist().await;

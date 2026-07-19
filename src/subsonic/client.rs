@@ -9,9 +9,9 @@ use url::Url;
 
 use super::auth::generate_auth_params;
 use super::models::{
-    Album, AlbumData, AlbumList2Data, Artist, ArtistData, ArtistsData, Child, MusicFolder,
-    MusicFoldersData, OpenSubsonicExtensionsData, PingData, Playlist, PlaylistData, PlaylistsData,
-    RandomSongsData, Search3Data, SearchResult3, StarredSongsData, SubsonicResponse,
+    Album, AlbumData, AlbumList2Data, Artist, ArtistData, ArtistsData, Child, CreatedPlaylistData,
+    MusicFolder, MusicFoldersData, OpenSubsonicExtensionsData, PingData, Playlist, PlaylistData,
+    PlaylistsData, RandomSongsData, Search3Data, SearchResult3, StarredSongsData, SubsonicResponse,
 };
 use crate::error::SubsonicError;
 use crate::secret::Secret;
@@ -161,12 +161,13 @@ impl SubsonicClient {
         &self,
         name: &str,
         song_ids: &[String],
-    ) -> Result<(), SubsonicError> {
+    ) -> Result<Playlist, SubsonicError> {
         let mut endpoint = format!("createPlaylist?name={}", urlencoding::encode(name));
         for id in song_ids {
             let _ = write!(endpoint, "&songId={}", urlencoding::encode(id));
         }
-        self.request_action(&endpoint).await
+        let data: CreatedPlaylistData = self.request(&endpoint).await?;
+        Ok(data.playlist)
     }
 
     /// Rename the playlist `id` to `name`.

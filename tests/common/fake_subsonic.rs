@@ -188,7 +188,13 @@ impl FakeSubsonic {
     pub async fn expect_create_playlist(&self) {
         Mock::given(method("GET"))
             .and(path("/rest/createPlaylist"))
-            .respond_with(ok_body(json!({})))
+            .respond_with(ok_body(json!({
+                "playlist": {
+                    "id": "created-1",
+                    "name": "Road Trip",
+                    "songCount": 1
+                }
+            })))
             .mount(&self.server)
             .await;
     }

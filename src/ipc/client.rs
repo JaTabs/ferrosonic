@@ -91,7 +91,9 @@ impl DaemonClient for InProcessClient {
                 Ok(DaemonResponse::Ok)
             }
             DaemonRequest::CreatePlaylist { name, song_ids } => {
-                ok_response(core.create_playlist(&name, &song_ids).await)
+                Ok(DaemonResponse::PlaylistCreated(
+                    core.create_playlist(&name, &song_ids).await.map_err(err)?,
+                ))
             }
             DaemonRequest::RenamePlaylist { id, name } => {
                 ok_response(core.rename_playlist(&id, &name).await)

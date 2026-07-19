@@ -428,6 +428,13 @@ pub struct Playlist {
     pub comment: Option<String>,
 }
 
+/// Payload returned by `createPlaylist`.
+#[derive(Debug, Deserialize)]
+pub struct CreatedPlaylistData {
+    /// Newly-created server-side playlist.
+    pub playlist: Playlist,
+}
+
 /// Payload of `getPlaylist`.
 #[derive(Debug, Deserialize)]
 pub struct PlaylistData {

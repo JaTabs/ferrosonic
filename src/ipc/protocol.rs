@@ -237,6 +237,8 @@ pub enum DaemonResponse {
     AlbumSongs(Vec<Child>),
     /// Songs of a requested playlist.
     PlaylistSongs(Vec<Child>),
+    /// Playlist returned after a successful server-side create.
+    PlaylistCreated(Playlist),
     /// Outcome of `TestServerConnection`.
     ConnectionTestResult {
         /// Whether the probe reached and authenticated with the server.
