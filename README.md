@@ -2,15 +2,19 @@
 
 A terminal Subsonic music client written in Rust: bit-perfect audio, gapless playback, and full desktop integration.
 
-It is a ground-up Rust rewrite of [Termsonic](https://git.sixfoisneuf.fr/termsonic/about/) (a Go client by [SixFoisNeuf](https://www.sixfoisneuf.fr/posts/termsonic-a-terminal-client-for-subsonic/)), adding PipeWire sample-rate switching, MPRIS2 controls, themes, and mouse support.
+> **This is an unofficial personal fork** of [jaidaken/ferrosonic](https://github.com/jaidaken/ferrosonic), created to add a few things I missed while using Ferrosonic day to day. The original project and the substantial work behind it belong to [jaidaken](https://github.com/jaidaken). If this fork is useful to you, please support the original creator by starring the upstream repository, contributing there, and using any sponsorship links they provide.
 
-> **About this fork** ([upstream: jaidaken/ferrosonic](https://github.com/jaidaken/ferrosonic)) — adds three features on top of upstream:
+Ferrosonic is a ground-up Rust rewrite of [Termsonic](https://git.sixfoisneuf.fr/termsonic/about/) (a Go client by [SixFoisNeuf](https://www.sixfoisneuf.fr/posts/termsonic-a-terminal-client-for-subsonic/)), adding PipeWire sample-rate switching, MPRIS2 controls, themes, and mouse support.
+
+> **Additions in this fork:**
 >
 > - **Quick-play search**: press `/` in the Library, type a song title, hit `Enter` — the best title match plays immediately (`Tab` keeps the old browse-the-results behavior).
 > - **Arrow-key seeking**: `←`/`→` seek back/forward 5 seconds anywhere in the app; hold `Shift` for 10-second jumps.
 > - **Volume slider**: a `♪` slider next to the progress bar. `+`/`-` step ±5%, the mouse wheel over Now Playing does the same, and the bar itself is click-and-drag. The value persists across restarts and shows green only at 100% — mpv's unity gain, where output stays bit-perfect.
+> - **Faster playlist actions**: `A` adds the selected or currently-playing song to the last-used playlist, while `a` opens a picker whose first option creates a new playlist.
+> - **Lyrics panel**: `y` toggles server-provided OpenSubsonic/Navidrome lyrics; synchronized lyrics follow playback and keep the current line highlighted and centered.
 >
-> To get them, [build from source](#build-from-source) from this repo — the Quick Install script downloads the upstream binary, which does not include them.
+> To get these additions, [build from source](#build-from-source) from this repo — the Quick Install script downloads the upstream binary, which does not include them.
 
 ## Features
 
@@ -30,7 +34,8 @@ It is a ground-up Rust rewrite of [Termsonic](https://git.sixfoisneuf.fr/termson
 - **Stars** - favourite tracks with `n` (playing) or `m` (highlighted); shown with a star everywhere.
 - **Shuffle and repeat** - shuffle any artist, album, or the whole library; cycle repeat Off/One/All with `r`.
 - **Queue** - add, remove, reorder, shuffle, and clear history; persists across daemon restarts; save as a server playlist with `s`.
-- **Playlists** - browse, play, and fully edit server playlists (rename, delete, add/remove/reorder songs).
+- **Playlists** - browse, play, and fully edit server playlists (rename, delete, add/remove/reorder songs), choose a destination with `a`, or quick-add to the last-used playlist with `A`.
+- **Lyrics** - toggle a lower panel with `y`; synchronized server lyrics automatically follow playback and highlight the current line.
 - **Multi-disc albums** - correct disc and track numbering.
 
 ### Desktop integration
@@ -68,7 +73,7 @@ Ferrosonic requires the following at runtime:
 
 ### Quick Install (upstream binary — no fork extras)
 
-Supports Arch, Fedora, and Debian/Ubuntu. Installs runtime dependencies, downloads the latest **upstream** precompiled binary (without this fork's quick-play search and arrow seeking), and installs to `/usr/local/bin/`:
+Supports Arch, Fedora, and Debian/Ubuntu. Installs runtime dependencies, downloads the latest **upstream** precompiled binary (without this fork's additions), and installs to `/usr/local/bin/`:
 
 ```bash
 curl -sSf https://raw.githubusercontent.com/jaidaken/ferrosonic/master/install.sh | sh
@@ -81,7 +86,7 @@ The install drops a single `ferrosonic` binary into `/usr/local/bin/`. It runs a
 This is the way to get this fork's features. You'll also need: Rust toolchain, pkg-config, OpenSSL dev headers, and D-Bus dev headers. Then:
 
 ```bash
-git clone -b feature/quick-play-search https://github.com/JaTabs/ferrosonic.git
+git clone -b feature/lyrics-and-smart-playlists https://github.com/JaTabs/ferrosonic.git
 cd ferrosonic
 cargo build --release
 sudo cp target/release/ferrosonic /usr/local/bin/
@@ -201,6 +206,9 @@ It is resolved at startup. Because the background daemon has no terminal, **the 
 | `←` / `→` | Seek back / forward 5 seconds |
 | `Shift+←` / `Shift+→` | Seek back / forward 10 seconds |
 | `n` | Star/unstar currently-playing song |
+| `y` | Toggle the lyrics panel; synchronized lyrics follow the current playback position |
+| `A` | Add the selected song, or the currently-playing song as fallback, to the last-used playlist; opens the picker if that playlist is unavailable |
+| `a` | Choose a destination playlist for the selected song, or create a new playlist; falls back to the currently-playing song |
 | `r` | Cycle repeat mode (Off → One → All) |
 | `Shift+T` | Shuffle the entire library and play |
 | `Ctrl+R` | Refresh data from server |
@@ -274,11 +282,13 @@ The Quick Play page has two modes selectable from the options pane: **Starred** 
 | `D` | Delete the selected playlist, with a confirmation prompt (playlists pane) |
 | `d` | Remove the highlighted song from the playlist (songs pane) |
 | `J` / `K` | Move the highlighted song down / up to reorder (songs pane) |
-| `a` | Add the highlighted song to another playlist via a picker (songs pane) |
+| `a` | Choose another playlist for the highlighted song, or create a new one (falls back to the currently-playing song outside the songs pane) |
+| `A` | Add the highlighted or currently-playing song directly to the last-used playlist |
 
 Reordering replaces the server playlist's contents in one request, since the
-Subsonic API has no in-place move. The `a` add-to-playlist picker is also
-available from the Library, Queue, and Quick Play song panes.
+Subsonic API has no in-place move. The global `a` and `A` playlist actions are
+available from every page; on music pages they prefer the highlighted song in
+the focused song pane and otherwise fall back to the currently-playing song.
 
 ### Server Page (F5)
 

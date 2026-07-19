@@ -5,7 +5,9 @@ use serde::{Deserialize, Serialize};
 use crate::config::{Config, RepeatMode};
 use crate::daemon::state::{DaemonState, NowPlaying};
 use crate::secret::{deserialize_secret, serialize_revealed, Secret};
-use crate::subsonic::models::{Album, Artist, Child, MusicFolder, Playlist, SearchResult3};
+use crate::subsonic::models::{
+    Album, Artist, Child, MusicFolder, Playlist, SearchResult3, StructuredLyrics,
+};
 
 /// Client-to-daemon command sent over the IPC socket.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -114,6 +116,11 @@ pub enum DaemonRequest {
     LoadAlbum(String),
     /// Fetch the songs of the playlist with this ID.
     LoadPlaylist(String),
+    /// Fetch and cache structured lyrics for a song.
+    GetLyrics {
+        /// Song ID understood by `getLyricsBySongId`.
+        song_id: String,
+    },
     /// Run a server-side search across artists, albums, and songs.
     Search {
         /// Search term.
@@ -220,6 +227,19 @@ pub enum PasswordStorage {
     Inline,
 }
 
+/// Stable outcome of a server-side lyrics lookup.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub enum LyricsResult {
+    /// Lyrics were found and selected for display.
+    Available(StructuredLyrics),
+    /// The server supports lyrics but has none for this song.
+    Empty,
+    /// The server does not advertise the `songLyrics` extension.
+    Unsupported,
+    /// The capability probe or lyrics request failed.
+    Unavailable,
+}
+
 /// Daemon-to-client reply to a single `DaemonRequest`.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum DaemonResponse {
@@ -237,6 +257,15 @@ pub enum DaemonResponse {
     AlbumSongs(Vec<Child>),
     /// Songs of a requested playlist.
     PlaylistSongs(Vec<Child>),
+    /// Playlist returned after a successful server-side create.
+    PlaylistCreated(Playlist),
+    /// Lyrics lookup result, tagged with the requested song for stale-response guards.
+    Lyrics {
+        /// Song ID originally requested.
+        song_id: String,
+        /// Stable lyrics outcome.
+        result: LyricsResult,
+    },
     /// Outcome of `TestServerConnection`.
     ConnectionTestResult {
         /// Whether the probe reached and authenticated with the server.

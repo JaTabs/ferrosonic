@@ -9,9 +9,10 @@ use url::Url;
 
 use super::auth::generate_auth_params;
 use super::models::{
-    Album, AlbumData, AlbumList2Data, Artist, ArtistData, ArtistsData, Child, MusicFolder,
-    MusicFoldersData, OpenSubsonicExtensionsData, PingData, Playlist, PlaylistData, PlaylistsData,
-    RandomSongsData, Search3Data, SearchResult3, StarredSongsData, SubsonicResponse,
+    Album, AlbumData, AlbumList2Data, Artist, ArtistData, ArtistsData, Child, CreatedPlaylistData,
+    LyricsListData, MusicFolder, MusicFoldersData, OpenSubsonicExtensionsData, PingData, Playlist,
+    PlaylistData, PlaylistsData, RandomSongsData, Search3Data, SearchResult3, StarredSongsData,
+    StructuredLyrics, SubsonicResponse,
 };
 use crate::error::SubsonicError;
 use crate::secret::Secret;
@@ -161,12 +162,13 @@ impl SubsonicClient {
         &self,
         name: &str,
         song_ids: &[String],
-    ) -> Result<(), SubsonicError> {
+    ) -> Result<Playlist, SubsonicError> {
         let mut endpoint = format!("createPlaylist?name={}", urlencoding::encode(name));
         for id in song_ids {
             let _ = write!(endpoint, "&songId={}", urlencoding::encode(id));
         }
-        self.request_action(&endpoint).await
+        let data: CreatedPlaylistData = self.request(&endpoint).await?;
+        Ok(data.playlist)
     }
 
     /// Rename the playlist `id` to `name`.
@@ -241,6 +243,19 @@ impl SubsonicClient {
     pub async fn get_open_subsonic_extensions(&self) -> Result<Vec<String>, SubsonicError> {
         let data: OpenSubsonicExtensionsData = self.request("getOpenSubsonicExtensions").await?;
         Ok(data.extensions.into_iter().map(|e| e.name).collect())
+    }
+
+    /// Fetch the structured lyrics variants attached to `id`.
+    ///
+    /// # Errors
+    /// Returns a `SubsonicError` if the request fails or the response cannot be parsed.
+    pub async fn get_lyrics_by_song_id(
+        &self,
+        id: &str,
+    ) -> Result<Vec<StructuredLyrics>, SubsonicError> {
+        let endpoint = format!("getLyricsBySongId?id={}", urlencoding::encode(id));
+        let data: LyricsListData = self.request(&endpoint).await?;
+        Ok(data.lyrics_list.structured_lyrics)
     }
 
     /// Classic Subsonic scrobble. `submission=false` is now-playing only;

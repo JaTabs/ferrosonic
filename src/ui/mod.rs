@@ -2,6 +2,7 @@
 
 pub mod chafa_ext;
 pub mod cover_art;
+pub mod create_playlist_prompt;
 pub mod footer;
 pub mod header;
 pub mod layout;
@@ -12,6 +13,7 @@ pub mod styled_lines;
 pub mod theme;
 mod theme_builtins;
 pub mod widget_cava;
+pub mod widget_lyrics;
 pub mod widget_now_playing;
 
 pub use layout::draw;

@@ -11,8 +11,8 @@ use crate::config::Config;
 use crate::subsonic::models::Child;
 
 pub use crate::app::page_state::{
-    ArtistsState, PlaylistPicker, PlaylistsState, QueueState, ServerState, SettingsState,
-    SongsState,
+    ArtistsState, CreatePlaylistPrompt, LyricsState, LyricsStatus, PlaylistPicker, PlaylistsState,
+    QueueState, ServerState, SettingsState, SongsState,
 };
 
 /// Top-level TUI page selected via the header tabs.
@@ -152,6 +152,36 @@ impl AppState<'_> {
             Some(SongOption::Random) => &self.daemon.library.random_songs,
             _ => &self.daemon.library.starred_songs,
         }
+    }
+
+    /// Song targeted by playlist actions: the focused pane selection, falling
+    /// back to the currently loaded song.
+    #[must_use]
+    pub fn target_song(&self) -> Option<&Child> {
+        let selected = match self.client.page {
+            Page::Library if self.client.artists.focus == 1 => self
+                .client
+                .artists
+                .selected_song
+                .and_then(|i| self.client.artists.songs.get(i)),
+            Page::Queue => self
+                .client
+                .queue_state
+                .selected
+                .and_then(|i| self.daemon.queue.get(i)),
+            Page::QuickPlay if self.client.songs.focus == 1 => self
+                .client
+                .songs
+                .selected_index
+                .and_then(|i| self.songs_list().get(i)),
+            Page::Playlists if self.client.playlists.focus == 1 => self
+                .client
+                .playlists
+                .selected_song
+                .and_then(|i| self.client.playlists.songs.get(i)),
+            _ => None,
+        };
+        selected.or(self.daemon.now_playing.song.as_ref())
     }
 }
 

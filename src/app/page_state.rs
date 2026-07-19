@@ -162,6 +162,46 @@ pub struct PlaylistPicker {
     pub song: Option<Child>,
 }
 
+/// Local presentation state for the optional lyrics panel.
+#[derive(Debug, Clone, Default)]
+pub struct LyricsState {
+    /// Whether the panel is visible.
+    pub open: bool,
+    /// Song whose response is currently expected or displayed.
+    pub song_id: Option<String>,
+    /// Current loading/display outcome.
+    pub status: LyricsStatus,
+}
+
+/// TUI-side state derived from a daemon lyrics response.
+#[derive(Debug, Clone, Default)]
+pub enum LyricsStatus {
+    /// No song has been requested.
+    #[default]
+    Idle,
+    /// A request is in flight.
+    Loading,
+    /// Lyrics are ready to render.
+    Ready(crate::subsonic::models::StructuredLyrics),
+    /// The server has no lyrics for this song.
+    Empty,
+    /// The server does not support structured song lyrics.
+    Unsupported,
+    /// The lookup failed.
+    Unavailable,
+}
+
+/// Name prompt for creating a playlist containing one target song.
+#[derive(Debug, Clone, Default)]
+pub struct CreatePlaylistPrompt {
+    /// True while the prompt is capturing input.
+    pub active: bool,
+    /// Playlist name being typed.
+    pub name: String,
+    /// Song to include when creation is confirmed.
+    pub song: Option<Child>,
+}
+
 /// UI state of the Server (credentials) page.
 #[derive(Clone, Default, Debug)]
 pub struct ServerState {

@@ -17,7 +17,7 @@ pub fn render(frame: &mut Frame<'_>, area: Rect, state: &AppState<'_>, colors: &
     let picker = &state.client.playlist_picker;
 
     let w = 60.min(area.width);
-    let rows = crate::num::u16_sat(playlists.len()).clamp(1, 14);
+    let rows = crate::num::u16_sat(playlists.len() + 1).clamp(1, 14);
     let h = (rows + 2).min(area.height);
     if w < 4 || h < 4 {
         return;
@@ -29,12 +29,11 @@ pub fn render(frame: &mut Frame<'_>, area: Rect, state: &AppState<'_>, colors: &
     let song = picker.song.as_ref().map_or("song", |s| s.title.as_str());
     let title = format!(" Add '{song}' to…  (Enter: add  Esc: cancel) ");
 
-    let items: Vec<ListItem<'_>> = playlists
-        .iter()
-        .map(|p| {
+    let items: Vec<ListItem<'_>> = std::iter::once(ListItem::new(Line::from("+ New playlist…")))
+        .chain(playlists.iter().map(|p| {
             let count = p.song_count.unwrap_or(0);
             ListItem::new(Line::from(format!("{}  ({count} songs)", p.name)))
-        })
+        }))
         .collect();
 
     let list = List::new(items)
@@ -52,9 +51,7 @@ pub fn render(frame: &mut Frame<'_>, area: Rect, state: &AppState<'_>, colors: &
         .highlight_symbol("▸ ");
 
     let mut list_state = ListState::default();
-    if !playlists.is_empty() {
-        list_state.select(Some(picker.selected.min(playlists.len() - 1)));
-    }
+    list_state.select(Some(picker.selected.min(playlists.len())));
 
     frame.render_widget(Clear, rect);
     frame.render_stateful_widget(list, rect, &mut list_state);

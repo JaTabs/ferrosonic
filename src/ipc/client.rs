@@ -91,7 +91,9 @@ impl DaemonClient for InProcessClient {
                 Ok(DaemonResponse::Ok)
             }
             DaemonRequest::CreatePlaylist { name, song_ids } => {
-                ok_response(core.create_playlist(&name, &song_ids).await)
+                Ok(DaemonResponse::PlaylistCreated(
+                    core.create_playlist(&name, &song_ids).await.map_err(err)?,
+                ))
             }
             DaemonRequest::RenamePlaylist { id, name } => {
                 ok_response(core.rename_playlist(&id, &name).await)
@@ -131,6 +133,10 @@ impl DaemonClient for InProcessClient {
             DaemonRequest::LoadPlaylist(id) => Ok(DaemonResponse::PlaylistSongs(
                 core.load_playlist_songs(&id).await,
             )),
+            DaemonRequest::GetLyrics { song_id } => Ok(DaemonResponse::Lyrics {
+                result: core.get_lyrics(&song_id).await,
+                song_id,
+            }),
             DaemonRequest::Search {
                 query,
                 artist_count,

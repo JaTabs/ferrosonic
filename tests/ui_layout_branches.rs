@@ -4,7 +4,7 @@ mod common;
 
 use common::render;
 use ferrosonic::app::client_state::ClientState;
-use ferrosonic::app::state::{CavaRow, Page};
+use ferrosonic::app::state::{CavaRow, LyricsStatus, Page};
 use ferrosonic::config::Config;
 use ferrosonic::daemon::DaemonState;
 use ferrosonic::subsonic::models::Child;
@@ -128,4 +128,36 @@ fn layout_with_cover_art_enabled_and_song_without_cover_id_uses_base_height() {
     client.settings_state.cover_art = true;
     let frame = render(80, 24, &daemon, &mut client);
     assert!(!frame.is_empty());
+}
+
+#[test]
+fn lyrics_panel_coexists_with_active_cava() {
+    let (daemon, mut client) = build_state();
+    client.settings_state.cava_enabled = true;
+    client.settings_state.cava_size = 25;
+    client.cava_screen = vec![CavaRow { spans: vec![] }];
+    client.lyrics.open = true;
+    client.lyrics.status = LyricsStatus::Loading;
+
+    let frame = render(120, 40, &daemon, &mut client);
+
+    assert!(frame.contains("Loading lyrics…"), "screen was:\n{frame}");
+    assert!(frame.contains("Now Playing"), "screen was:\n{frame}");
+    assert!(frame.contains("q:Quit"), "screen was:\n{frame}");
+}
+
+#[test]
+fn lyrics_panel_coexists_with_cover_art_height() {
+    let (mut daemon, mut client) = build_state();
+    daemon.now_playing.song = Some(song_with_cover("s", "art"));
+    client.settings_state.cover_art = true;
+    client.settings_state.cover_art_size = 16;
+    client.lyrics.open = true;
+    client.lyrics.status = LyricsStatus::Loading;
+
+    let frame = render(120, 40, &daemon, &mut client);
+
+    assert!(frame.contains("Loading lyrics…"), "screen was:\n{frame}");
+    assert!(frame.contains("Now Playing"), "screen was:\n{frame}");
+    assert!(frame.contains("q:Quit"), "screen was:\n{frame}");
 }

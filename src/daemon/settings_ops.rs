@@ -86,6 +86,8 @@ impl DaemonCore {
                 .fetch_add(1, std::sync::atomic::Ordering::Release);
             slot.replace(new_client);
         }
+        self.lyrics_cache.write().await.clear();
+        *self.song_lyrics_supported.write().await = None;
 
         self.refresh_starred().await;
         self.refresh_artists().await;

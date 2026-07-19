@@ -4,9 +4,10 @@ mod common;
 
 use common::TestDaemon;
 use ferrosonic::ipc::client::DaemonClient;
-use ferrosonic::ipc::protocol::{DaemonRequest, DaemonResponse};
+use ferrosonic::ipc::protocol::{DaemonRequest, DaemonResponse, LyricsResult};
 use ferrosonic::ipc::server::serve;
 use ferrosonic::ipc::SocketClient;
+use serde_json::json;
 use serial_test::serial;
 
 #[tokio::test]
@@ -80,5 +81,54 @@ async fn shuffle_queue_request_routes_through_socket() {
         "shuffle preserves current position"
     );
 
+    server_task.abort();
+}
+
+#[tokio::test]
+#[serial]
+async fn lyrics_request_round_trips_with_song_id() {
+    let td = TestDaemon::new().await;
+    td.fake_subsonic
+        .expect_open_subsonic_extensions(&["songLyrics"])
+        .await;
+    td.fake_subsonic
+        .expect_lyrics(
+            "song-1",
+            json!({
+                "structuredLyrics": [{
+                    "synced": true,
+                    "line": [{ "start": 1000, "value": "First" }]
+                }]
+            }),
+        )
+        .await;
+    let socket = td.config_dir.path().join("lyrics.sock");
+    let core = td.core.clone();
+    let socket_path = socket.clone();
+    let server_task = tokio::spawn(async move {
+        let _ = serve(core, &socket_path).await;
+    });
+    for _ in 0..30 {
+        if socket.exists() {
+            break;
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(20)).await;
+    }
+
+    let client = SocketClient::connect(&socket).await.unwrap();
+    let response = client
+        .request(DaemonRequest::GetLyrics {
+            song_id: "song-1".into(),
+        })
+        .await
+        .unwrap();
+
+    assert!(matches!(
+        response,
+        DaemonResponse::Lyrics {
+            ref song_id,
+            result: LyricsResult::Available(ref lyrics),
+        } if song_id == "song-1" && lyrics.synced
+    ));
     server_task.abort();
 }

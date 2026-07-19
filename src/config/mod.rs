@@ -35,6 +35,7 @@ pub const KNOWN_CONFIG_KEYS: &[&str] = &[
     "MusicFolderId",
     "MusicFolderChosen",
     "Volume",
+    "LastPlaylistId",
 ];
 
 /// A command run to obtain the password: a shell string or an argv array.
@@ -153,6 +154,14 @@ pub struct Config {
     /// pass through untouched, preserving bit-perfect output.
     #[serde(rename = "Volume", default = "Config::default_volume")]
     pub volume: u8,
+
+    /// Last server-side playlist that accepted a song through the TUI.
+    #[serde(
+        rename = "LastPlaylistId",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub last_playlist_id: Option<String>,
 }
 
 // Serialization mirror of Config; same independent TOML setting keys.
@@ -202,6 +211,8 @@ struct ConfigOnDisk<'a> {
     music_folder_chosen: bool,
     #[serde(rename = "Volume")]
     volume: u8,
+    #[serde(rename = "LastPlaylistId", skip_serializing_if = "Option::is_none")]
+    last_playlist_id: Option<&'a str>,
 }
 
 // Serializes the revealed secret. Replaces a serialize_with fn whose
@@ -245,6 +256,7 @@ impl Config {
             music_folder_id: self.music_folder_id,
             music_folder_chosen: self.music_folder_chosen,
             volume: self.volume,
+            last_playlist_id: self.last_playlist_id.as_deref(),
         }
     }
 }
@@ -379,6 +391,7 @@ impl Default for Config {
             password_eval: None,
             password_keyring: false,
             volume: Self::default_volume(),
+            last_playlist_id: None,
         }
     }
 }
@@ -1001,6 +1014,22 @@ Password = "testpass"
         config.username = "user".to_string();
         config.password = Secret::from_string("pass".to_string());
         assert!(config.is_configured());
+    }
+
+    #[test]
+    fn last_playlist_id_defaults_none_and_round_trips() {
+        let mut c = Config::default();
+        assert_eq!(c.last_playlist_id, None);
+        c.last_playlist_id = Some("pl-42".into());
+        let f = NamedTempFile::new().unwrap();
+        c.save_to_file(f.path()).unwrap();
+        assert_eq!(
+            Config::load_from_file(f.path())
+                .unwrap()
+                .last_playlist_id
+                .as_deref(),
+            Some("pl-42")
+        );
     }
 
     #[test]

@@ -25,4 +25,4 @@ expression: frame
 │                                                                              │
 └──────────────────────────────────────────────────────────────────────────────┘
 q:Quit │ p/Space:Pause │ h:Prev │ l:Next                                        
-n:Star playing │ m:Star selected │ d:Rem
+n:Star playing │ m:Star selected │ a:Cho

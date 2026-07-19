@@ -2,7 +2,7 @@ use crossterm::event::{self, Event, KeyCode, KeyModifiers};
 
 use crate::error::Error;
 
-use super::{App, AppState, DaemonRequest, Page};
+use super::{App, AppState, DaemonRequest, LyricsStatus, Page};
 
 impl App {
     /// Handle terminal events. Pub for integration tests; production
@@ -83,6 +83,14 @@ impl App {
                 }
                 _ => return Ok(()),
             }
+        }
+
+        // Create-playlist prompt: while open, the overlay owns every key.
+        if state.client.create_playlist_prompt.active {
+            let _ = state;
+            drop(cs);
+            drop(ds);
+            return self.handle_create_playlist_prompt_key(key).await;
         }
 
         // Add-to-playlist picker: while open, the overlay owns every key.
@@ -256,6 +264,80 @@ impl App {
                 if let Some(id) = song_id {
                     let _ = self.client.request(DaemonRequest::ToggleStarSong(id)).await;
                 }
+                return Ok(());
+            }
+            (KeyCode::Char('A'), _) => {
+                let song = state.target_song().cloned();
+                let last = state
+                    .daemon
+                    .config
+                    .last_playlist_id
+                    .as_deref()
+                    .and_then(|id| {
+                        state
+                            .daemon
+                            .library
+                            .playlists
+                            .iter()
+                            .find(|playlist| playlist.id == id)
+                            .map(|playlist| (playlist.id.clone(), playlist.name.clone()))
+                    });
+                let has_playlists = !state.daemon.library.playlists.is_empty();
+                let Some(song) = song else {
+                    state.client.notify("Nothing to add");
+                    return Ok(());
+                };
+                if !has_playlists {
+                    state.client.open_create_playlist_prompt(song);
+                    return Ok(());
+                }
+                if let Some((playlist_id, playlist_name)) = last {
+                    let _ = state;
+                    drop(cs);
+                    drop(ds);
+                    return self
+                        .add_song_to_playlist(song, playlist_id, playlist_name)
+                        .await;
+                }
+                state.client.open_playlist_picker(song);
+                return Ok(());
+            }
+            (KeyCode::Char('a'), KeyModifiers::NONE) => {
+                let song = state.target_song().cloned();
+                let has_playlists = !state.daemon.library.playlists.is_empty();
+                let Some(song) = song else {
+                    state.client.notify("Nothing to add");
+                    return Ok(());
+                };
+                if has_playlists {
+                    state.client.open_playlist_picker(song);
+                } else {
+                    state.client.open_create_playlist_prompt(song);
+                }
+                return Ok(());
+            }
+            (KeyCode::Char('y'), KeyModifiers::NONE) => {
+                state.client.lyrics.open = !state.client.lyrics.open;
+                if !state.client.lyrics.open {
+                    return Ok(());
+                }
+                let song_id = state
+                    .daemon
+                    .now_playing
+                    .song
+                    .as_ref()
+                    .map(|song| song.id.clone());
+                let Some(song_id) = song_id else {
+                    state.client.lyrics.song_id = None;
+                    state.client.lyrics.status = LyricsStatus::Idle;
+                    return Ok(());
+                };
+                let client = self.client.clone();
+                let client_state = self.client_state.clone();
+                let _ = state;
+                drop(cs);
+                drop(ds);
+                crate::app::event_pump::request_lyrics(client, client_state, song_id).await;
                 return Ok(());
             }
             (KeyCode::Char('T'), _) => {
