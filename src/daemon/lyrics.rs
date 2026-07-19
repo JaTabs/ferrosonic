@@ -1,4 +1,4 @@
-//! OpenSubsonic lyrics capability, selection, and in-memory cache.
+//! `OpenSubsonic` lyrics capability, selection, and in-memory cache.
 
 use crate::daemon::core::DaemonCore;
 use crate::ipc::protocol::LyricsResult;
@@ -16,13 +16,15 @@ pub(crate) fn select_lyrics(items: Vec<StructuredLyrics>) -> Option<StructuredLy
 impl DaemonCore {
     /// Fetch the best lyrics variant for `song_id`, memoizing capability and result.
     pub async fn get_lyrics(&self, song_id: &str) -> LyricsResult {
-        if let Some(hit) = self.lyrics_cache.read().await.get(song_id).cloned() {
+        let cached = self.lyrics_cache.read().await.get(song_id).cloned();
+        if let Some(hit) = cached {
             return hit;
         }
         let Some(client) = self.subsonic.read().await.clone() else {
             return LyricsResult::Unavailable;
         };
-        let supported = if let Some(value) = *self.song_lyrics_supported.read().await {
+        let cached_support = *self.song_lyrics_supported.read().await;
+        let supported = if let Some(value) = cached_support {
             Ok(value)
         } else {
             client

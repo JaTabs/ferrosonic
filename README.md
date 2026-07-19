@@ -12,6 +12,7 @@ Ferrosonic is a ground-up Rust rewrite of [Termsonic](https://git.sixfoisneuf.fr
 > - **Arrow-key seeking**: `←`/`→` seek back/forward 5 seconds anywhere in the app; hold `Shift` for 10-second jumps.
 > - **Volume slider**: a `♪` slider next to the progress bar. `+`/`-` step ±5%, the mouse wheel over Now Playing does the same, and the bar itself is click-and-drag. The value persists across restarts and shows green only at 100% — mpv's unity gain, where output stays bit-perfect.
 > - **Faster playlist actions**: `A` adds the selected or currently-playing song to the last-used playlist, while `a` opens a picker whose first option creates a new playlist.
+> - **Lyrics panel**: `y` toggles server-provided OpenSubsonic/Navidrome lyrics; synchronized lyrics follow playback and keep the current line highlighted and centered.
 >
 > To get these additions, [build from source](#build-from-source) from this repo — the Quick Install script downloads the upstream binary, which does not include them.
 
@@ -34,6 +35,7 @@ Ferrosonic is a ground-up Rust rewrite of [Termsonic](https://git.sixfoisneuf.fr
 - **Shuffle and repeat** - shuffle any artist, album, or the whole library; cycle repeat Off/One/All with `r`.
 - **Queue** - add, remove, reorder, shuffle, and clear history; persists across daemon restarts; save as a server playlist with `s`.
 - **Playlists** - browse, play, and fully edit server playlists (rename, delete, add/remove/reorder songs), choose a destination with `a`, or quick-add to the last-used playlist with `A`.
+- **Lyrics** - toggle a lower panel with `y`; synchronized server lyrics automatically follow playback and highlight the current line.
 - **Multi-disc albums** - correct disc and track numbering.
 
 ### Desktop integration
@@ -204,6 +206,7 @@ It is resolved at startup. Because the background daemon has no terminal, **the 
 | `←` / `→` | Seek back / forward 5 seconds |
 | `Shift+←` / `Shift+→` | Seek back / forward 10 seconds |
 | `n` | Star/unstar currently-playing song |
+| `y` | Toggle the lyrics panel; synchronized lyrics follow the current playback position |
 | `A` | Add the selected song, or the currently-playing song as fallback, to the last-used playlist; opens the picker if that playlist is unavailable |
 | `a` | Choose a destination playlist for the selected song, or create a new playlist; falls back to the currently-playing song |
 | `r` | Cycle repeat mode (Off → One → All) |

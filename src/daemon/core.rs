@@ -152,7 +152,7 @@ pub struct DaemonCore {
     /// In-memory lyrics outcomes, keyed by Subsonic song ID.
     pub(super) lyrics_cache:
         RwLock<std::collections::HashMap<String, crate::ipc::protocol::LyricsResult>>,
-    /// Memoized support for the OpenSubsonic `songLyrics` extension.
+    /// Memoized support for the `OpenSubsonic` `songLyrics` extension.
     pub(super) song_lyrics_supported: RwLock<Option<bool>>,
     /// Cancellation flag for the in-flight pre-buffer task. Replaced
     /// (and the old one flipped) on each new request so rapid track

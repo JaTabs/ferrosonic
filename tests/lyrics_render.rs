@@ -78,6 +78,16 @@ fn synced_lyrics_center_and_highlight_current_line() {
 }
 
 #[test]
+fn footer_documents_lyrics_toggle() {
+    let daemon = DaemonState::new(Config::default());
+    let mut client = ClientState::default();
+
+    let screen = render(200, 28, &daemon, &mut client);
+
+    assert!(screen.contains("y:Lyrics"), "screen was:\n{screen}");
+}
+
+#[test]
 fn short_terminal_keeps_footer_and_now_playing_visible() {
     let daemon = DaemonState::new(Config::default());
     let mut client = open_client(LyricsStatus::Ready(StructuredLyrics {

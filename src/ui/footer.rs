@@ -65,6 +65,7 @@ impl<'a> Footer<'a> {
             ("h".into(), "Prev".into()),
             ("l".into(), "Next".into()),
             ("+/-".into(), "Vol".into()),
+            ("y".into(), "Lyrics".into()),
             ("A".into(), "Quick playlist".into()),
             ("r".into(), repeat_label),
             ("Shift+T".into(), "Shuffle library".into()),
