@@ -75,6 +75,7 @@ fn arb_config() -> impl Strategy<Value = Config> {
                 music_folder_id,
                 music_folder_chosen,
                 volume,
+                last_playlist_id: None,
             },
         )
 }
