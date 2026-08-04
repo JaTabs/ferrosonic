@@ -2,19 +2,26 @@
 
 use std::os::unix::io::FromRawFd;
 
-use tracing::{error, info};
+use tracing::{error, info, warn};
 
 use super::{App, CavaColor, CavaRow, CavaSpan};
 
 impl App {
-    /// Spawn cava on a pty sized to the terminal, replacing any running instance.
+    /// Spawn cava on a pty of exactly `cols` x `rows`, replacing any
+    /// running instance. Callers pass the band rect the widget will paint
+    /// into; a pty of any other size renders misaligned.
     pub fn start_cava(
         &mut self,
         cava_gradient: &[String; 8],
         cava_horizontal_gradient: &[String; 8],
-        cava_size: u32,
+        cols: u16,
+        rows: u16,
     ) {
         self.stop_cava();
+
+        if cols == 0 || rows == 0 {
+            return;
+        }
 
         // Backstop: remove cava configs leaked by a SIGKILLed prior session.
         crate::io_util::sweep_stale_tmp_files(
@@ -23,9 +30,7 @@ impl App {
             std::time::Duration::from_hours(1),
         );
 
-        let (term_w, term_h) = crossterm::terminal::size().unwrap_or((80, 24));
-        let cava_h = crate::num::u16_sat((u32::from(term_h) * cava_size / 100).max(4));
-        let cava_w = term_w;
+        let (cava_w, cava_h) = (cols, rows);
 
         let mut master: libc::c_int = 0;
         let mut slave: libc::c_int = 0;
@@ -116,6 +121,39 @@ impl App {
         }
     }
 
+    /// Restart cava whenever its pty no longer matches the band the layout
+    /// pass reserved. Covers the startup estimate, resizes and any page
+    /// change that squeezes the band; without it cava keeps drawing at its
+    /// old size, pinned to the top-left of a larger rect.
+    // significant_drop_tightening: the read guard scopes each block; the
+    // theme borrow can't outlive it.
+    #[allow(clippy::significant_drop_tightening)]
+    pub async fn sync_cava_to_layout(&mut self) {
+        let Some(parser) = self.cava_parser.as_ref() else {
+            return;
+        };
+        // Runs every frame: compare sizes first, clone gradients only on
+        // the rare frame that actually restarts cava.
+        let Some(band) = self.client_state.read().await.layout.cava else {
+            return;
+        };
+        let (cols, rows) = (band.width, band.height);
+        if parser.screen().size() == (rows, cols) {
+            return;
+        }
+        let (g, h) = {
+            let cs = self.client_state.read().await;
+            let td = cs.settings_state.current_theme();
+            (
+                td.cava_gradient.clone(),
+                td.cava_horizontal_gradient.clone(),
+            )
+        };
+        // The stale frame keeps painting until the new pty produces one:
+        // clearing it would collapse the band and flicker the layout.
+        self.start_cava(&g, &h, cols, rows);
+    }
+
     /// Kill the cava subprocess and drop its pty state.
     pub fn stop_cava(&mut self) {
         if let Some(ref mut child) = self.cava_process {
@@ -153,6 +191,19 @@ impl App {
             }
         }
     }
+}
+
+/// Band size to start cava with before a layout pass has published the
+/// real rect. Mirrors the layout's percentage band; `sync_cava_to_layout`
+/// corrects any mismatch on the next frame.
+#[must_use]
+pub fn estimated_band_size(cava_size: u32) -> (u16, u16) {
+    let (term_w, term_h) = crossterm::terminal::size().unwrap_or_else(|e| {
+        warn!("Terminal size unavailable ({e}); cava starts at 80x24 until the first frame");
+        (80, 24)
+    });
+    let rows = crate::num::u16_sat((u32::from(term_h) * cava_size / 100).max(4));
+    (term_w, rows)
 }
 
 /// Result of one non-blocking drain of the cava pty.

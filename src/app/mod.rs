@@ -231,9 +231,10 @@ impl App {
                 let td = cs.settings_state.current_theme();
                 let g = td.cava_gradient.clone();
                 let h = td.cava_horizontal_gradient.clone();
-                let size = u32::from(cs.settings_state.cava_size);
+                let (cols, rows) =
+                    cava_pipe::estimated_band_size(u32::from(cs.settings_state.cava_size));
                 drop(cs);
-                self.start_cava(&g, &h, size);
+                self.start_cava(&g, &h, cols, rows);
             }
         }
 
@@ -483,6 +484,7 @@ impl App {
                     terminal.clear().map_err(UiError::Render)?;
                 }
             }
+            self.sync_cava_to_layout().await;
             self.read_cava_output().await;
             self.tick_post().await;
         }

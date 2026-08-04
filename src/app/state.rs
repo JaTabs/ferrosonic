@@ -94,6 +94,9 @@ pub struct LayoutAreas {
     pub content: Rect,
     /// Now-playing strip at the bottom.
     pub now_playing: Rect,
+    /// Cava band, when the visualizer is on screen. Source of truth for
+    /// the pty size: cava must draw exactly into this rect.
+    pub cava: Option<Rect>,
     /// Left pane of a split content region, when split.
     pub content_left: Option<Rect>,
     /// Right pane of a split content region, when split.

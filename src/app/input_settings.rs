@@ -124,11 +124,11 @@ impl App {
 
         // Cava lifecycle is client-side; daemon toggle doesn't affect it.
         let cava_running = self.cava_parser.is_some();
-        let cava_h = u32::from(cava_size);
+        let (cava_w, cava_h) = crate::app::cava_pipe::estimated_band_size(u32::from(cava_size));
         match change {
             SettingChange::Cava => {
                 if cava_enabled {
-                    self.start_cava(&gradient, &h_gradient, cava_h);
+                    self.start_cava(&gradient, &h_gradient, cava_w, cava_h);
                 } else if cava_running {
                     self.stop_cava();
                     let ds = self.daemon_state.read().await;
@@ -142,7 +142,7 @@ impl App {
             }
             SettingChange::Theme | SettingChange::CavaSize => {
                 if cava_enabled {
-                    self.start_cava(&gradient, &h_gradient, cava_h);
+                    self.start_cava(&gradient, &h_gradient, cava_w, cava_h);
                 }
             }
             SettingChange::CoverArt

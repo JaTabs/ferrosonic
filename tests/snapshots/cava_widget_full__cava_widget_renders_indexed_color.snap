@@ -5,11 +5,12 @@ expression: "format!(\"{buf:?}\")"
 Buffer {
     area: Rect { x: 0, y: 0, width: 10, height: 2 },
     content: [
-        "X         ",
         "          ",
+        "X         ",
     ],
     styles: [
-        x: 0, y: 0, fg: Indexed(42), bg: Indexed(7), underline: Reset, modifier: NONE,
-        x: 1, y: 0, fg: Reset, bg: Reset, underline: Reset, modifier: NONE,
+        x: 0, y: 0, fg: Reset, bg: Reset, underline: Reset, modifier: NONE,
+        x: 0, y: 1, fg: Indexed(42), bg: Indexed(7), underline: Reset, modifier: NONE,
+        x: 1, y: 1, fg: Reset, bg: Reset, underline: Reset, modifier: NONE,
     ]
 }

@@ -127,6 +127,7 @@ pub fn draw(
         header: header_area,
         content: content_area,
         now_playing: now_playing_area,
+        cava: cava_area,
         content_left,
         content_right,
     };

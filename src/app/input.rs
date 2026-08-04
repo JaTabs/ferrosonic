@@ -23,16 +23,18 @@ impl App {
             Event::Mouse(mouse) => self.handle_mouse(mouse).await,
             Event::Resize(_, _) => {
                 if self.cava_parser.is_some() {
-                    let (g, h, cava_h) = {
+                    let (g, h, (cava_w, cava_h)) = {
                         let cs = self.client_state.read().await;
                         let td = cs.settings_state.current_theme();
                         (
                             td.cava_gradient.clone(),
                             td.cava_horizontal_gradient.clone(),
-                            u32::from(cs.settings_state.cava_size),
+                            crate::app::cava_pipe::estimated_band_size(u32::from(
+                                cs.settings_state.cava_size,
+                            )),
                         )
                     };
-                    self.start_cava(&g, &h, cava_h);
+                    self.start_cava(&g, &h, cava_w, cava_h);
                     let mut cs = self.client_state.write().await;
                     cs.cava_screen.clear();
                 }

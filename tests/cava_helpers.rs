@@ -79,7 +79,7 @@ async fn start_cava_with_real_binary_then_stop() {
     let mut app = App::new(config);
     let g: [String; 8] = std::array::from_fn(|_| "#ff00ff".into());
     let h: [String; 8] = std::array::from_fn(|_| "#00ff00".into());
-    app.start_cava(&g, &h, 40);
+    app.start_cava(&g, &h, 120, 10);
     tokio::time::sleep(std::time::Duration::from_millis(200)).await;
     app.stop_cava();
 }

@@ -5,8 +5,8 @@ expression: "format!(\"{buf:?}\")"
 Buffer {
     area: Rect { x: 0, y: 0, width: 10, height: 2 },
     content: [
-        "r0        ",
         "r1        ",
+        "r2        ",
     ],
     styles: [
         x: 0, y: 0, fg: Reset, bg: Reset, underline: Reset, modifier: NONE,

@@ -83,7 +83,7 @@ fn cava_widget_truncates_text_overflowing_width() {
 }
 
 #[test]
-fn cava_widget_breaks_at_height_overflow() {
+fn cava_widget_keeps_bottom_rows_on_height_overflow() {
     let rows = vec![
         CavaRow {
             spans: vec![span("r0", CavaColor::Default, CavaColor::Default)],
